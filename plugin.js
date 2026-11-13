@@ -7,7 +7,7 @@ export const meta = {
     en: "Gemini Omni Flash video generation (text-to-video and image-to-video) and Gemini Decision 1 decisions on the Gemini API",
     zh: "Gemini Omni Flash 视频生成（文生视频、图生视频）与 Gemini Decision 1 结构化判断，Gemini API 版本",
   },
-  version: "1.1.0",
+  version: "1.1.1",
   author: { name: "ByAiden", url: "https://github.com/ByAiden" },
   website: "https://aistudio.google.com/docs/omni",
   baseUrl: "https://generativelanguage.googleapis.com",
@@ -81,6 +81,9 @@ export const meta = {
   ],
 };
 
+// The gateway reads the manifest statically, so the code below uses these copies of its values.
+const PLUGIN_KEY = "byaiden_gemini";
+
 // Gemini Decisions API: https://aistudio.google.com/docs/decisions-api
 // Limits follow its Limits section. The context window bounds shared input
 // and all questions together. Text-only requests reserve their UTF-8 size (a
@@ -119,7 +122,7 @@ function viaGateway(ctx) {
 }
 
 function apiRoot(ctx) {
-  return ctx.baseUrl.replace(/\/+$/, "") + (viaGateway(ctx) ? "/" + meta.key : "");
+  return ctx.baseUrl.replace(/\/+$/, "") + (viaGateway(ctx) ? "/" + PLUGIN_KEY : "");
 }
 
 function authHeaders(ctx) {

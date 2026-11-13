@@ -78,7 +78,7 @@ test("meta is a plain JSON literal with the community key", () => {
   assert.equal(meta.channelTypes, undefined);
   assert.equal(meta.baseUrl, BASE);
   assert.equal(meta.author.url, "https://github.com/" + meta.author.name);
-  assert.equal(meta.version, "1.1.0");
+  assert.equal(meta.version, "1.1.1");
   assert.deepEqual(meta.models, OMNI.concat(["gemini-decision-1"]));
 });
 
@@ -346,3 +346,11 @@ test("a mapped Omni alias sends the upstream model name", () => {
   assert.equal(buildSubmitRequest(driverCtx(intent, { model: "video", upstreamModel: "gemini-omni-1.2-flash" })).body.model, "gemini-omni-1.2-flash");
 });
 
+
+test("code never references meta, so the gateway can read it statically", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../plugin.js", import.meta.url), "utf8");
+  const rest = src.slice(src.indexOf("\n};\n", src.indexOf("export const meta = {")));
+  assert.doesNotMatch(rest, /(^|[^A-Za-z0-9_$.])meta([^A-Za-z0-9_$]|$)/m);
+  assert.ok(rest.includes(JSON.stringify(meta.key)));
+});
