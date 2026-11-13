@@ -1,0 +1,549 @@
+{
+  "cases": [
+    {
+      "name": "decision request goes to /v1beta/decisions with the mapped model",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "gemini-decision-1",
+            "input": "The mug arrived cracked.",
+            "questions": {
+              "damaged": {
+                "type": "noul",
+                "instructions": "Damaged?"
+              }
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "decide",
+          "model": "decision",
+          "upstreamModel": "gemini-decision-1",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/decisions",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "x-goog-api-key": "test-key"
+        },
+        "body": {
+          "model": "gemini-decision-1",
+          "input": "The mug arrived cracked.",
+          "questions": {
+            "damaged": {
+              "type": "noul",
+              "instructions": "Damaged?"
+            }
+          }
+        },
+        "action": "decide"
+      }
+    },
+    {
+      "name": "decision reserves its UTF-8 size",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "requestBody": {
+            "model": "gemini-decision-1",
+            "input": "The mug arrived cracked.",
+            "questions": {
+              "damaged": {
+                "type": "noul",
+                "instructions": "Damaged?"
+              }
+            }
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "decide",
+          "model": "gemini-decision-1",
+          "upstreamModel": "gemini-decision-1",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "input_tokens": 422
+      }
+    },
+    {
+      "name": "decision rejects unknown request fields",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "model": "gemini-decision-1",
+            "input": "x",
+            "questions": {
+              "q": {
+                "type": "noul",
+                "instructions": "x"
+              }
+            },
+            "temperature": 0
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "decide",
+          "model": "gemini-decision-1",
+          "upstreamModel": "gemini-decision-1",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expectedError": "request.temperature is not supported"
+    },
+    {
+      "name": "decision settles on reported input tokens",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "action": "decide",
+          "model": "gemini-decision-1"
+        },
+        {},
+        {
+          "answers": {},
+          "usage": {
+            "total_input_tokens": 95
+          }
+        }
+      ],
+      "expected": {
+        "input_tokens": 95
+      }
+    },
+    {
+      "name": "decision without usage keeps the reservation",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "action": "decide",
+          "model": "gemini-decision-1"
+        },
+        {},
+        {
+          "answers": {}
+        }
+      ],
+      "expectedError": "usage is missing"
+    },
+    {
+      "name": "omni submits a background interaction",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "requestBody": {
+            "prompt": "A boat",
+            "resolution": "360p",
+            "duration": 3,
+            "model": "gemini-omni-1.2-flash"
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "text_to_video",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        }
+      ],
+      "expected": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "x-goog-api-key": "test-key"
+        },
+        "body": {
+          "model": "gemini-omni-1.2-flash",
+          "input": [
+            {
+              "type": "text",
+              "text": "A boat"
+            }
+          ],
+          "response_format": {
+            "type": "video",
+            "aspect_ratio": "16:9",
+            "resolution": "360p",
+            "duration": "3s"
+          },
+          "background": true,
+          "store": true,
+          "generation_config": {
+            "video_config": {
+              "task": "text_to_video"
+            }
+          }
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "omni keeps the interaction id",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "requestBody": {
+            "prompt": "A boat",
+            "resolution": "360p",
+            "duration": 3,
+            "model": "gemini-omni-1.2-flash"
+          },
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "action": "text_to_video",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "authHeader": "Bearer test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public"
+        },
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "id": "v1_abc",
+            "object": "interaction",
+            "status": "in_progress"
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "v1_abc",
+        "taskData": {
+          "id": "v1_abc",
+          "object": "interaction",
+          "status": "in_progress"
+        }
+      }
+    },
+    {
+      "name": "omni completed interaction succeeds",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "v1_abc",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "upstream": {
+            "kind": "vendor"
+          }
+        },
+        {
+          "id": "v1_abc",
+          "object": "interaction",
+          "status": "completed",
+          "usage": {
+            "total_input_tokens": 14,
+            "output_tokens_by_modality": [
+              {
+                "modality": "video",
+                "tokens": 5793
+              }
+            ],
+            "total_thought_tokens": 535
+          },
+          "steps": [
+            {
+              "type": "user_input",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "x"
+                }
+              ]
+            },
+            {
+              "type": "model_output",
+              "content": [
+                {
+                  "type": "video",
+                  "mime_type": "video/mp4",
+                  "data": "AAAA"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "SUCCESS",
+        "progress": "100%"
+      }
+    },
+    {
+      "name": "omni unknown state is UNKNOWN",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "taskId": "v1_abc",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "upstream": {
+            "kind": "vendor"
+          }
+        },
+        {
+          "status": "requires_action"
+        },
+        {
+          "status": 200,
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "status": "UNKNOWN",
+        "reason": "unrecognized interaction state"
+      }
+    },
+    {
+      "name": "omni settles input, thinking and video tokens",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "taskId": "v1_abc",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "upstream": {
+            "kind": "vendor"
+          }
+        },
+        {},
+        {
+          "id": "v1_abc",
+          "object": "interaction",
+          "status": "completed",
+          "usage": {
+            "total_input_tokens": 14,
+            "output_tokens_by_modality": [
+              {
+                "modality": "video",
+                "tokens": 5793
+              }
+            ],
+            "total_thought_tokens": 535
+          },
+          "steps": [
+            {
+              "type": "user_input",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "x"
+                }
+              ]
+            },
+            {
+              "type": "model_output",
+              "content": [
+                {
+                  "type": "video",
+                  "mime_type": "video/mp4",
+                  "data": "AAAA"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "input_tokens": 14,
+        "output_tokens": 535,
+        "video_tokens": 5793
+      }
+    },
+    {
+      "name": "omni lists the inline video",
+      "hook": "listArtifacts",
+      "args": [
+        {
+          "taskId": "v1_abc",
+          "status": "SUCCESS",
+          "action": "text_to_video",
+          "data": {
+            "id": "v1_abc",
+            "object": "interaction",
+            "status": "completed",
+            "usage": {
+              "total_input_tokens": 14,
+              "output_tokens_by_modality": [
+                {
+                  "modality": "video",
+                  "tokens": 5793
+                }
+              ],
+              "total_thought_tokens": 535
+            },
+            "steps": [
+              {
+                "type": "user_input",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "x"
+                  }
+                ]
+              },
+              {
+                "type": "model_output",
+                "content": [
+                  {
+                    "type": "video",
+                    "mime_type": "video/mp4",
+                    "data": "AAAA"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "expected": [
+        {
+          "key": "video",
+          "type": "video",
+          "mimeType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "name": "omni download reads the video from the interaction",
+      "hook": "buildContentRequest",
+      "args": [
+        {
+          "taskId": "v1_abc",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "apiKey": "test-key",
+          "upstream": {
+            "kind": "vendor"
+          },
+          "artifactKey": "video",
+          "data": {
+            "id": "v1_abc",
+            "object": "interaction",
+            "status": "completed",
+            "usage": {
+              "total_input_tokens": 14,
+              "output_tokens_by_modality": [
+                {
+                  "modality": "video",
+                  "tokens": 5793
+                }
+              ],
+              "total_thought_tokens": 535
+            },
+            "steps": [
+              {
+                "type": "user_input",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "x"
+                  }
+                ]
+              },
+              {
+                "type": "model_output",
+                "content": [
+                  {
+                    "type": "video",
+                    "mime_type": "video/mp4",
+                    "data": "AAAA"
+                  }
+                ]
+              }
+            ]
+          },
+          "upstreamTaskId": "v1_abc",
+          "clientRequest": {
+            "method": "GET",
+            "headers": {}
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/interactions/v1_abc",
+        "method": "GET",
+        "headers": {
+          "Accept": "application/json",
+          "x-goog-api-key": "test-key"
+        },
+        "responseType": "json",
+        "contentPath": [
+          "steps",
+          1,
+          "content",
+          0,
+          "data"
+        ],
+        "mimeType": "video/mp4"
+      }
+    }
+  ]
+}
