@@ -1,13 +1,13 @@
 export const meta = {
   apiVersion: 1,
-  key: "gemini",
+  key: "byaiden_gemini",
   name: "Gemini Omni & Gemini Decision (Gemini API)",
   icon: "Gemini.Color",
   description: {
     en: "Gemini Omni Flash video generation (text-to-video and image-to-video) and Gemini Decision 1 decisions on the Gemini API",
     zh: "Gemini Omni Flash 视频生成（文生视频、图生视频）与 Gemini Decision 1 结构化判断，Gemini API 版本",
   },
-  version: "1.0.0",
+  version: "1.1.0",
   author: { name: "ByAiden", url: "https://github.com/ByAiden" },
   website: "https://aistudio.google.com/docs/omni",
   baseUrl: "https://generativelanguage.googleapis.com",

@@ -14,7 +14,7 @@ Requires new-api v1.0.0-rc.50 or later.
 
 ## Channel setup
 
-1. Install the plugin, then add a channel of type Task Plugin and bind it to `gemini`.
+1. Install the plugin, then add a channel of type Task Plugin and bind it to `byaiden_gemini`.
 2. Base URL: leave empty for `https://generativelanguage.googleapis.com`.
 3. Key: a Gemini API key from Google AI Studio. Gemini Omni needs a project on the paid tier; Gemini Decision also works on the free tier.
 4. Models: `gemini-omni-1.2-flash`, `gemini-omni-1.1-flash` and `gemini-decision-1`, as you offer them. A model appears on the pricing pages only after an enabled channel lists it.
@@ -30,7 +30,7 @@ Requires new-api v1.0.0-rc.50 or later.
 
 Clients poll `GET /v1/videos/{task_id}` and download the file from `GET /v1/videos/{task_id}/content`. A finished Responses result contains a gateway link to the video; background responses are read with `GET /v1/responses/{response_id}`.
 
-`POST /v1beta/decisions` is also served under `/gemini`. It takes the gateway token as `Authorization: Bearer` only; the `x-goog-api-key` header and `?key=` parameter are not accepted.
+`POST /v1beta/decisions` is also served under `/byaiden_gemini`. It takes the gateway token as `Authorization: Bearer` only; the `x-goog-api-key` header and `?key=` parameter are not accepted.
 
 Video requests take `prompt`, `seconds`, `resolution` (`360p`, `720p`, `1080p` or `4k`) and `size`. A `size` taller than it is wide gives a 9:16 video, other sizes 16:9; without `resolution` it is derived from `size`, otherwise `720p`. One image is the first frame, two are the first and last frame, three to six are subject references.
 

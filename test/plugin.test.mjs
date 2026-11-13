@@ -73,12 +73,12 @@ test("meta is a plain JSON literal with the community key", () => {
   assert.ok(block);
   const json = block[1].replace(/^\s*\/\/[^\n]*\n/gm, "").replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":').replace(/,(\s*[}\]])/g, "$1");
   assert.deepEqual(JSON.parse(json), meta);
-  assert.equal(meta.key, "gemini");
+  assert.equal(meta.key, "byaiden_gemini");
   assert.ok(meta.key.length <= 30);
   assert.equal(meta.channelTypes, undefined);
   assert.equal(meta.baseUrl, BASE);
   assert.equal(meta.author.url, "https://github.com/" + meta.author.name);
-  assert.equal(meta.version, "1.0.0");
+  assert.equal(meta.version, "1.1.0");
   assert.deepEqual(meta.models, OMNI.concat(["gemini-decision-1"]));
 });
 

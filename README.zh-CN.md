@@ -12,7 +12,7 @@ locale: zh-CN
 
 ## 渠道设置
 
-1. 安装插件后，新建渠道，类型选 Task Plugin，绑定插件 `gemini`。
+1. 安装插件后，新建渠道，类型选 Task Plugin，绑定插件 `byaiden_gemini`。
 2. Base URL：留空即使用 `https://generativelanguage.googleapis.com`。
 3. 密钥：Google AI Studio 创建的 Gemini API Key。Gemini Omni 需要项目开通付费层级；Gemini Decision 免费层级也可以用。
 4. 模型：按需填写 `gemini-omni-1.2-flash`、`gemini-omni-1.1-flash` 和 `gemini-decision-1`。模型要被已启用的渠道列出，才会出现在价格页面。
@@ -28,7 +28,7 @@ locale: zh-CN
 
 客户端轮询 `GET /v1/videos/{task_id}` 查看状态，完成后从 `GET /v1/videos/{task_id}/content` 下载视频。Responses 的结果里带有网关提供的视频链接；后台调用的结果用 `GET /v1/responses/{response_id}` 查询。
 
-`POST /v1beta/decisions` 也可以加 `/gemini` 前缀访问。网关令牌只能放在 `Authorization: Bearer` 里，不支持 `x-goog-api-key` 请求头和 `?key=` 参数。
+`POST /v1beta/decisions` 也可以加 `/byaiden_gemini` 前缀访问。网关令牌只能放在 `Authorization: Bearer` 里，不支持 `x-goog-api-key` 请求头和 `?key=` 参数。
 
 视频请求支持 `prompt`、`seconds`、`resolution`（`360p`、`720p`、`1080p` 或 `4k`）和 `size`。`size` 高大于宽时生成 9:16 的视频，其他尺寸生成 16:9；没有 `resolution` 时按 `size` 换算，都没有时按 `720p`。一张图作为首帧，两张图作为首帧和尾帧，三到六张图作为主体参考图。
 
