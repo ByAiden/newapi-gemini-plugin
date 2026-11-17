@@ -18,7 +18,7 @@ Requires new-api v1.0.0-rc.50 or later.
 2. Base URL: leave empty for `https://generativelanguage.googleapis.com`.
 3. Key: a Gemini API key from Google AI Studio. Gemini Omni needs a project on the paid tier; Gemini Decision also works on the free tier.
 4. Models: `gemini-omni-1.2-flash`, `gemini-omni-1.1-flash` and `gemini-decision-1`, as you offer them. A model appears on the pricing pages only after an enabled channel lists it.
-5. To use another New API gateway as the upstream, add a New API channel with that gateway's address and token and bind this plugin; that gateway needs the plugin too. Only Gemini Decision works this way.
+5. To use another New API gateway as the upstream, see Through another New API gateway below.
 
 ## Models and endpoints
 
@@ -79,6 +79,15 @@ curl https://your-gateway.example.com/v1beta/decisions \
 ```json
 {"answers": {"is_damaged": {"type": "noul", "noul": 0.99, "confidence": 0.99}}, "usage": {"total_input_tokens": 100, "input_tokens_by_modality": [{"modality": "text", "tokens": 100}], "total_output_tokens": 0, "total_tokens": 100}}
 ```
+
+## Through another New API gateway
+
+A second gateway can sell these models through yours. Install this plugin, 1.2.0 or later, on both gateways:
+
+- On the gateway that calls Google, set up the channel above.
+- On the other gateway, create a **New API** channel (type 60). Its base URL is the first gateway's address and its key is a token from the first gateway. Pick `byaiden_gemini` under Upstream task plugins and add the models.
+
+Gemini Omni goes to the first gateway's `POST /v1/videos` with the token as a Bearer key, is polled at `GET /v1/videos/{id}` there and downloads from `GET /v1/videos/{id}/content`; the client can use `/v1/videos` or `/v1/responses` on the outer gateway. Gemini Decision goes to the first gateway's `/byaiden_gemini/v1beta/decisions`. Both gateways reserve and settle the same way: a finished video object on the first gateway carries the billed `usage` (`input_tokens`, `output_tokens`, `video_tokens`), and a decision reply carries `usage.total_input_tokens`, so the expressions above charge the same usage on both. Against a first gateway older than 1.2.0, Gemini Omni on the outer gateway keeps the reserved video tokens and bills no input or text output tokens.
 
 ## Limits
 

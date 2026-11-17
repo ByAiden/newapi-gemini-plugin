@@ -7,7 +7,7 @@ export const meta = {
     en: "Gemini Omni Flash video generation (text-to-video and image-to-video) and Gemini Decision 1 decisions on the Gemini API",
     zh: "Gemini Omni Flash 视频生成（文生视频、图生视频）与 Gemini Decision 1 结构化判断，Gemini API 版本",
   },
-  version: "1.1.1",
+  version: "1.2.0",
   author: { name: "ByAiden", url: "https://github.com/ByAiden" },
   website: "https://aistudio.google.com/docs/omni",
   baseUrl: "https://generativelanguage.googleapis.com",
@@ -298,8 +298,6 @@ function omniModel(ctx) {
 }
 
 function interactionsURL(ctx, interactionId) {
-  // The upstream gateway has no Interactions route for this plugin.
-  if (viaGateway(ctx)) throw new Error("Gemini Omni is not available through a New API gateway");
   const base = trimmed(ctx.baseUrl).replace(/\/+$/, "") || DEFAULT_API_ROOT;
   const url = base + "/v1beta/interactions";
   return interactionId ? url + "/" + encodeURIComponent(interactionId) : url;
@@ -489,6 +487,70 @@ function omniSettlement(body) {
   return facts;
 }
 
+// ---- Gemini Omni through another New API gateway ----
+// That gateway serves Gemini Omni on its OpenAI video endpoint, so the
+// request goes there as an OpenAI video request carrying the checked fields.
+// Its video object (with the gateway's own task id) is polled, the video is
+// downloaded from its content address, and its usage field holds the facts
+// that gateway settled on.
+
+function gatewayVideoURL(ctx, taskId) {
+  const url = trimmed(ctx.baseUrl).replace(/\/+$/, "") + "/v1/videos";
+  return taskId ? url + "/" + encodeURIComponent(taskId) : url;
+}
+
+function gatewayHeaders(ctx) {
+  return { "Content-Type": "application/json", Accept: "application/json", Authorization: "Bearer " + ctx.apiKey };
+}
+
+function isGatewayVideo(body) {
+  return plainObject(body) !== null && body.object === "video";
+}
+
+function gatewaySubmitRequest(ctx) {
+  const req = ctx.requestBody || {};
+  const images = omniImages(req);
+  if (images.length > MAX_OMNI_IMAGES) throw new Error("Gemini Omni takes at most " + MAX_OMNI_IMAGES + " images");
+  // Uploaded files stay host placeholders, which the host fills with base64.
+  const sent = images.map(function (image) {
+    inputImage(ctx, image);
+    return plainObject(image) && image.__fileRef ? image : trimmed(image);
+  });
+  if (!trimmed(req.prompt) && !sent.length) throw new Error("prompt is required");
+  const body = { model: ctx.upstreamModel || ctx.model, seconds: omniDuration(ctx, req), resolution: omniResolution(req) };
+  if (trimmed(req.prompt)) body.prompt = req.prompt;
+  if (req.size !== undefined && req.size !== null && req.size !== "") body.size = req.size;
+  if (sent.length) body.images = sent;
+  return { url: gatewayVideoURL(ctx), method: "POST", headers: gatewayHeaders(ctx), body: body, action: sent.length ? "image_to_video" : "text_to_video" };
+}
+
+function gatewayTaskResult(body) {
+  body = plainObject(body) || {};
+  const status = trimmed(body.status).toLowerCase();
+  const value = Number(body.progress);
+  const progress = Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) + "%" : undefined;
+  if (status === "completed") return { status: "SUCCESS", progress: "100%" };
+  if (status === "failed") {
+    const error = plainObject(body.error) || {};
+    return { status: "FAILURE", progress: "100%", reason: trimmed(error.message) || "task failed" };
+  }
+  if (status === "queued") return { status: "QUEUED", progress: progress || "0%" };
+  if (status === "in_progress") return progress ? { status: "IN_PROGRESS", progress: progress } : { status: "IN_PROGRESS" };
+  return { status: "UNKNOWN", reason: "unrecognized video status: " + (status || "none") };
+}
+
+// The facts the other gateway settled on; missing or malformed ones keep the
+// reservation.
+function gatewaySettlement(body) {
+  const usage = plainObject(body && body.usage);
+  if (!usage) return null;
+  const facts = {};
+  for (const key of ["input_tokens", "output_tokens", "video_tokens"]) {
+    if (Number.isInteger(usage[key]) && usage[key] >= 0) facts[key] = usage[key];
+  }
+  return Object.keys(facts).length ? facts : null;
+}
+
 function responsesInput(req) {
   const texts = [],
     images = [];
@@ -559,14 +621,14 @@ export const native = {
 export function buildSubmitRequest(ctx) {
   if (isDecision(ctx)) return decisionRequest(ctx);
   if (!omniModel(ctx)) throw new Error("unsupported model; use gemini-omni-1.2-flash, gemini-omni-1.1-flash or gemini-decision-1");
-  return omniSubmitRequest(ctx);
+  return viaGateway(ctx) ? gatewaySubmitRequest(ctx) : omniSubmitRequest(ctx);
 }
 
 export function parseSubmitResponse(ctx, resp) {
   if (isDecision(ctx)) return decisionResult(ctx, resp);
   const body = plainObject(resp.body) || {};
   const id = trimmed(body.id);
-  if (!id) throw new Error("Gemini Omni response is missing the interaction id");
+  if (!id) throw new Error(viaGateway(ctx) ? "the gateway response is missing the video id" : "Gemini Omni response is missing the interaction id");
   return { taskId: id, taskData: body };
 }
 
@@ -588,26 +650,40 @@ export function extractUsageOnComplete(task, result, data) {
       throw new Error("Gemini Decisions input token usage is missing or outside the context window");
     return { input_tokens: tokens };
   }
+  if (isGatewayVideo(data)) return gatewaySettlement(data);
   if (omniModel(task) || isInteraction(data)) return omniSettlement(data);
   return null;
 }
 
 export function buildQueryRequest(ctx) {
+  if (viaGateway(ctx)) return { url: gatewayVideoURL(ctx, ctx.taskId), method: "GET", headers: { Accept: "application/json", Authorization: "Bearer " + ctx.apiKey } };
   return { url: interactionsURL(ctx, ctx.taskId), method: "GET", headers: Object.assign({ Accept: "application/json" }, authHeaders(ctx)) };
 }
 
 export function parseTaskResult(ctx, body) {
+  if (viaGateway(ctx) || isGatewayVideo(body)) return gatewayTaskResult(body);
   return omniTaskResult(body);
 }
 
 export function listArtifacts(task) {
-  if (task.status !== "SUCCESS" || !isInteraction(task.data)) return [];
+  if (task.status !== "SUCCESS") return [];
+  if (isGatewayVideo(task.data)) return [{ key: "video", type: "video", mimeType: "video/mp4" }];
+  if (!isInteraction(task.data)) return [];
   const video = omniVideo(task.data);
   return video ? [{ key: "video", type: "video", mimeType: video.mimeType }] : [];
 }
 
 export function buildContentRequest(ctx) {
-  if (ctx.artifactKey !== "video" || !isInteraction(ctx.data)) throw new Error("artifact_not_found");
+  if (ctx.artifactKey !== "video") throw new Error("artifact_not_found");
+  if (viaGateway(ctx)) {
+    if (!trimmed(ctx.upstreamTaskId)) throw new Error("artifact_not_found");
+    return {
+      url: gatewayVideoURL(ctx, ctx.upstreamTaskId) + "/content",
+      method: ctx.clientRequest && ctx.clientRequest.method === "HEAD" ? "HEAD" : "GET",
+      headers: { Authorization: "Bearer " + ctx.apiKey },
+    };
+  }
+  if (!isInteraction(ctx.data)) throw new Error("artifact_not_found");
   const video = omniVideo(ctx.data);
   if (!video) throw new Error("artifact_not_found");
   return {
@@ -696,6 +772,9 @@ const legacyRenderers = {
     };
     if (Number(task.finish_time) > 0) output.completed_at = Number(task.finish_time);
     else if (Number(task.updated_at) > 0) output.completed_at = Number(task.updated_at);
+    // The billed usage facts, which a gateway in front of this one settles on.
+    const usage = task.status === "SUCCESS" && isInteraction(task.data) ? omniSettlement(task.data) : null;
+    if (usage && Object.keys(usage).length) output.usage = usage;
     return output;
   },
 };

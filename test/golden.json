@@ -544,6 +544,276 @@
         ],
         "mimeType": "video/mp4"
       }
+    },
+    {
+      "name": "new_api: gemini-omni-1.2-flash goes to the other gateway's OpenAI video endpoint with its token",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "baseUrl": "https://up.example",
+          "apiKey": "sk-up",
+          "authHeader": "Bearer sk-up",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public",
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "requestBody": {
+            "model": "gemini-omni-1.2-flash",
+            "prompt": "a boat",
+            "duration": 4,
+            "size": "1280x720",
+            "metadata": {}
+          },
+          "action": "text_to_video",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "auth": {}
+        }
+      ],
+      "expected": {
+        "url": "https://up.example/v1/videos",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer sk-up"
+        },
+        "body": {
+          "model": "gemini-omni-1.2-flash",
+          "seconds": 4,
+          "resolution": "720p",
+          "prompt": "a boat",
+          "size": "1280x720"
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "new_api: the other gateway's video id is kept",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {
+          "baseUrl": "https://up.example",
+          "apiKey": "sk-up",
+          "authHeader": "Bearer sk-up",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public",
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "requestBody": {
+            "model": "gemini-omni-1.2-flash",
+            "prompt": "a boat",
+            "duration": 4,
+            "size": "1280x720",
+            "metadata": {}
+          },
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "auth": {}
+        },
+        {
+          "status": 200,
+          "body": {
+            "id": "task_up1",
+            "object": "video",
+            "status": "queued",
+            "progress": 0
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "task_up1",
+        "taskData": {
+          "id": "task_up1",
+          "object": "video",
+          "status": "queued",
+          "progress": 0
+        }
+      }
+    },
+    {
+      "name": "new_api: query reads the other gateway's video object",
+      "hook": "buildQueryRequest",
+      "args": [
+        {
+          "baseUrl": "https://up.example",
+          "apiKey": "sk-up",
+          "authHeader": "Bearer sk-up",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public",
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "taskId": "task_up1",
+          "action": "text_to_video",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "auth": {}
+        }
+      ],
+      "expected": {
+        "url": "https://up.example/v1/videos/task_up1",
+        "method": "GET",
+        "headers": {
+          "Accept": "application/json",
+          "Authorization": "Bearer sk-up"
+        }
+      }
+    },
+    {
+      "name": "new_api: a completed video object succeeds",
+      "hook": "parseTaskResult",
+      "args": [
+        {
+          "baseUrl": "https://up.example",
+          "apiKey": "sk-up",
+          "authHeader": "Bearer sk-up",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public",
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "taskId": "task_up1",
+          "action": "text_to_video",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "auth": {}
+        },
+        {
+          "id": "task_up1",
+          "object": "video",
+          "model": "gemini-omni-1.2-flash",
+          "status": "completed",
+          "progress": 100,
+          "usage": {
+            "input_tokens": 14,
+            "output_tokens": 535,
+            "video_tokens": 5793
+          }
+        }
+      ],
+      "expected": {
+        "status": "SUCCESS",
+        "progress": "100%"
+      }
+    },
+    {
+      "name": "new_api: settlement follows the usage the other gateway billed",
+      "hook": "extractUsageOnComplete",
+      "args": [
+        {
+          "baseUrl": "https://up.example",
+          "apiKey": "sk-up",
+          "authHeader": "Bearer sk-up",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public",
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "taskId": "task_up1",
+          "action": "text_to_video",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "auth": {}
+        },
+        {
+          "status": "SUCCESS"
+        },
+        {
+          "id": "task_up1",
+          "object": "video",
+          "model": "gemini-omni-1.2-flash",
+          "status": "completed",
+          "progress": 100,
+          "usage": {
+            "input_tokens": 14,
+            "output_tokens": 535,
+            "video_tokens": 5793
+          }
+        }
+      ],
+      "expected": {
+        "input_tokens": 14,
+        "output_tokens": 535,
+        "video_tokens": 5793
+      }
+    },
+    {
+      "name": "new_api: download reads the other gateway's content address",
+      "hook": "buildContentRequest",
+      "args": [
+        {
+          "baseUrl": "https://up.example",
+          "apiKey": "sk-up",
+          "authHeader": "Bearer sk-up",
+          "upstream": {
+            "kind": "new_api"
+          },
+          "config": {},
+          "files": [],
+          "publicTaskId": "task_public",
+          "requestHeaders": {
+            "Content-Type": "application/json",
+            "Accept": ""
+          },
+          "taskId": "task_up1",
+          "action": "text_to_video",
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "auth": {},
+          "artifactKey": "video",
+          "data": {
+            "id": "task_up1",
+            "object": "video",
+            "model": "gemini-omni-1.2-flash",
+            "status": "completed",
+            "progress": 100,
+            "usage": {
+              "input_tokens": 14,
+              "output_tokens": 535,
+              "video_tokens": 5793
+            }
+          },
+          "upstreamTaskId": "task_up1",
+          "clientRequest": {
+            "method": "GET"
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://up.example/v1/videos/task_up1/content",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer sk-up"
+        }
+      }
     }
   ]
 }

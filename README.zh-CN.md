@@ -16,7 +16,7 @@ locale: zh-CN
 2. Base URL：留空即使用 `https://generativelanguage.googleapis.com`。
 3. 密钥：Google AI Studio 创建的 Gemini API Key。Gemini Omni 需要项目开通付费层级；Gemini Decision 免费层级也可以用。
 4. 模型：按需填写 `gemini-omni-1.2-flash`、`gemini-omni-1.1-flash` 和 `gemini-decision-1`。模型要被已启用的渠道列出，才会出现在价格页面。
-5. 如果上游是另一台 New API 网关，新建 New API 渠道，填该网关的地址和令牌并绑定本插件，上游网关也需要安装本插件。这种方式只支持 Gemini Decision。
+5. 如果上游是另一台 New API 网关，见下文「经由另一个 New API 网关」。
 
 ## 模型与接口
 
@@ -77,6 +77,15 @@ curl https://your-gateway.example.com/v1beta/decisions \
 ```json
 {"answers": {"is_damaged": {"type": "noul", "noul": 0.99, "confidence": 0.99}}, "usage": {"total_input_tokens": 100, "input_tokens_by_modality": [{"modality": "text", "tokens": 100}], "total_output_tokens": 0, "total_tokens": 100}}
 ```
+
+## 经由另一个 New API 网关
+
+另一个网关可以通过你的网关转售这些模型。两边都安装本插件 1.2.0 或更高版本：
+
+- 直接调用 Google 的网关：按上文配置渠道。
+- 另一个网关创建 **New API** 渠道（类型 60）：Base URL 填第一个网关的地址，密钥填第一个网关的令牌，在「上游任务插件」中选择 `byaiden_gemini`，并添加模型。
+
+Gemini Omni 发往第一个网关的 `POST /v1/videos`，令牌作 Bearer 密钥，在那里的 `GET /v1/videos/{id}` 查询，从 `GET /v1/videos/{id}/content` 下载；客户端在外层可以用 `/v1/videos` 或 `/v1/responses`。Gemini Decision 发往第一个网关的 `/byaiden_gemini/v1beta/decisions`。两层用同样的方式预扣和结算：第一个网关完成的视频对象带有计费用的 `usage`（`input_tokens`、`output_tokens`、`video_tokens`），Decision 回复带有 `usage.total_input_tokens`，所以上面的表达式在两层按相同用量收费。如果第一个网关的插件早于 1.2.0，外层的 Gemini Omni 保持预扣的视频 token，不收输入和文本输出 token。
 
 ## 限制
 

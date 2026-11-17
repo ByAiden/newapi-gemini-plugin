@@ -78,7 +78,8 @@ test("meta is a plain JSON literal with the community key", () => {
   assert.equal(meta.channelTypes, undefined);
   assert.equal(meta.baseUrl, BASE);
   assert.equal(meta.author.url, "https://github.com/" + meta.author.name);
-  assert.equal(meta.version, "1.1.1");
+  assert.ok(readFileSync(new URL("../CHANGELOG.md", import.meta.url), "utf8").includes("\nversion: " + meta.version + "\n"));
+  assert.deepEqual(meta.upstreams, ["vendor", "new_api"]);
   assert.deepEqual(meta.models, OMNI.concat(["gemini-decision-1"]));
 });
 
@@ -336,9 +337,66 @@ test("Omni failures and unknown states are reported, never guessed", () => {
   assert.equal(extractUsageOnComplete({ model: "gemini-omni-1.2-flash" }, {}, { status: "completed" }), null);
 });
 
-test("Omni through another New API gateway is refused before billing reaches Google", () => {
-  const ctx = driverCtx(videoIntent({ prompt: "x" }), { baseUrl: "https://up.example", upstream: { kind: "new_api" } });
-  assert.throws(() => buildSubmitRequest(ctx), /not available through a New API gateway/);
+test("Omni through another New API gateway goes to its OpenAI video endpoint with a Bearer token", () => {
+  const ctx = driverCtx(videoIntent({ prompt: "a boat", seconds: 5, size: "720x1280", resolution: "1080p" }), { baseUrl: "https://up.example/", apiKey: "sk-up", upstream: { kind: "new_api" } });
+  deepFreeze(ctx);
+  const request = buildSubmitRequest(ctx);
+  assert.equal(request.url, "https://up.example/v1/videos");
+  assert.equal(request.method, "POST");
+  assert.deepEqual(request.headers, { "Content-Type": "application/json", Accept: "application/json", Authorization: "Bearer sk-up" });
+  assert.deepEqual(request.body, { model: "gemini-omni-1.2-flash", seconds: 5, resolution: "1080p", prompt: "a boat", size: "720x1280" });
+  assert.equal(request.action, "text_to_video");
+  assert.deepEqual(extractUsage(ctx), { input_tokens: 0, output_tokens: 0, video_tokens: 5 * 8688 });
+
+  // The other gateway answers with its own video object and task id.
+  const created = { id: "task_up1", object: "video", model: "gemini-omni-1.2-flash", status: "queued", progress: 0, created_at: 1 };
+  assert.deepEqual(parseSubmitResponse(ctx, deepFreeze({ statusCode: 200, body: created })), { taskId: "task_up1", taskData: created });
+  assert.throws(() => parseSubmitResponse(ctx, { statusCode: 200, body: {} }), /missing the video id/);
+
+  const query = deepFreeze({ taskId: "task_up1", action: "text_to_video", model: "gemini-omni-1.2-flash", upstreamModel: "gemini-omni-1.2-flash", baseUrl: "https://up.example", apiKey: "sk-up", upstream: { kind: "new_api" } });
+  assert.deepEqual(buildQueryRequest(query), { url: "https://up.example/v1/videos/task_up1", method: "GET", headers: { Accept: "application/json", Authorization: "Bearer sk-up" } });
+  assert.deepEqual(parseTaskResult(query, created), { status: "QUEUED", progress: "0%" });
+  assert.deepEqual(parseTaskResult(query, { ...created, status: "in_progress", progress: 42 }), { status: "IN_PROGRESS", progress: "42%" });
+  assert.deepEqual(parseTaskResult(query, { ...created, status: "failed", error: { message: "blocked", code: "task_failed" } }), { status: "FAILURE", progress: "100%", reason: "blocked" });
+  assert.equal(parseTaskResult(query, { ...created, status: "cancelled" }).status, "UNKNOWN");
+
+  const finished = deepFreeze({ ...created, status: "completed", progress: 100, usage: { input_tokens: 14, output_tokens: 535, video_tokens: 5793 } });
+  assert.deepEqual(parseTaskResult(query, finished), { status: "SUCCESS", progress: "100%" });
+  assert.deepEqual(extractUsageOnComplete(query, {}, finished), { input_tokens: 14, output_tokens: 535, video_tokens: 5793 });
+  // An older gateway without usage, or malformed values, keep the reservation.
+  assert.equal(extractUsageOnComplete(query, {}, { ...created, status: "completed" }), null);
+  assert.deepEqual(extractUsageOnComplete(query, {}, { ...created, usage: { input_tokens: -1, video_tokens: 1.5, output_tokens: 3 } }), { output_tokens: 3 });
+
+  assert.deepEqual(listArtifacts({ status: "SUCCESS", data: finished }), [{ key: "video", type: "video", mimeType: "video/mp4" }]);
+  assert.deepEqual(listArtifacts({ status: "IN_PROGRESS", data: created }), []);
+  const content = buildContentRequest(Object.assign({}, query, { artifactKey: "video", data: finished, upstreamTaskId: "task_up1", clientRequest: { method: "GET" } }));
+  assert.deepEqual(content, { url: "https://up.example/v1/videos/task_up1/content", method: "GET", headers: { Authorization: "Bearer sk-up" } });
+  assert.equal(buildContentRequest(Object.assign({}, query, { artifactKey: "video", data: finished, upstreamTaskId: "task_up1", clientRequest: { method: "HEAD" } })).method, "HEAD");
+  assert.throws(() => buildContentRequest(Object.assign({}, query, { artifactKey: "image", data: finished, upstreamTaskId: "task_up1" })), /artifact_not_found/);
+});
+
+test("through a gateway, images go as given or as host file placeholders", () => {
+  const gw = { baseUrl: "https://up.example", apiKey: "sk-up", upstream: { kind: "new_api" } };
+  const png = "data:image/png;base64,iVBORw0KGgoAAAA";
+  const one = buildSubmitRequest(driverCtx(videoIntent({ prompt: "animate", input_reference: png }), gw));
+  assert.deepEqual(one.body.images, [png]);
+  assert.equal(one.action, "image_to_video");
+  const intent = protocols.openai_video.decodeRequest({
+    model: "gemini-omni-1.2-flash",
+    body: { kind: "multipart", fields: { prompt: ["animate"], seconds: ["4"] }, files: [{ field: "input_reference", mimeType: "image/png", ref: "request_file:input_reference" }] },
+  });
+  const files = [{ field: "input_reference", mimeType: "image/png", ref: "request_file:input_reference" }];
+  const upload = buildSubmitRequest(driverCtx(intent, Object.assign({ files: files }, gw)));
+  assert.equal(upload.body.images[0].__fileRef, "request_file:input_reference");
+  assert.equal(upload.body.seconds, 4);
+  assert.throws(() => buildSubmitRequest(driverCtx(videoIntent({ prompt: "x", images: ["data:image/gif;base64,R0lGOD"] }), gw)), /image\/jpeg or image\/png/);
+  assert.throws(() => buildSubmitRequest(driverCtx(videoIntent({ prompt: "x", seconds: 12 }, "gemini-omni-1.1-flash"), gw)), /3 to 10/);
+});
+
+test("the video object carries the billed usage for a gateway in front", () => {
+  const view = { task_id: "task_pub", status: "SUCCESS", progress: "100%", created_at: 1, data: DONE, properties: { origin_model_name: "gemini-omni-1.2-flash" } };
+  assert.deepEqual(protocols.openai_video.render({}, view).usage, { input_tokens: 14, output_tokens: 535, video_tokens: 5793 });
+  assert.equal(protocols.openai_video.render({}, { ...view, status: "IN_PROGRESS", data: { status: "in_progress", object: "interaction" } }).usage, undefined);
 });
 
 test("a mapped Omni alias sends the upstream model name", () => {
