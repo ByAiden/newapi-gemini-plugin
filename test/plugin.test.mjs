@@ -80,7 +80,10 @@ test("meta is a plain JSON literal with the community key", () => {
   assert.equal(meta.author.url, "https://github.com/" + meta.author.name);
   assert.ok(readFileSync(new URL("../CHANGELOG.md", import.meta.url), "utf8").includes("\nversion: " + meta.version + "\n"));
   assert.deepEqual(meta.upstreams, ["vendor", "new_api"]);
-  assert.deepEqual(meta.models, OMNI.concat(["gemini-decision-1"]));
+  assert.deepEqual(meta.models, plugin.MODEL_IDS);
+  assert.equal(meta.key, plugin.PLUGIN_KEY);
+  assert.deepEqual(plugin.TASK_MODEL_IDS, OMNI.concat(["gemini-decision-1"]));
+  for (const id of plugin.TASK_MODEL_IDS) assert.ok(meta.models.includes(id));
 });
 
 test("video protocols serve Omni, the decisions route serves Gemini Decision", () => {

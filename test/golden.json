@@ -1,4 +1,5 @@
 {
+  "unixNow": 1794000000,
   "cases": [
     {
       "name": "decision request goes to /v1beta/decisions with the mapped model",
@@ -814,6 +815,999 @@
           "Authorization": "Bearer sk-up"
         }
       }
+    },
+    {
+      "name": "native stream request goes to streamGenerateContent with SSE",
+      "hook": "prepareRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1beta/models/gemini-3.8-flash:streamGenerateContent",
+          "config": {}
+        },
+        {
+          "path": "/v1beta/models/gemini-3.8-flash:streamGenerateContent",
+          "upstreamPath": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "model": "gemini-3.8-flash",
+          "stream": true,
+          "body": {},
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "path": "/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse"
+      }
+    },
+    {
+      "name": "native request keeps the route path",
+      "hook": "prepareRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "config": {}
+        },
+        {
+          "path": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "upstreamPath": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "model": "gemini-3.8-flash",
+          "stream": false,
+          "body": {},
+          "headers": {}
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "configured API version applies to chat completions",
+      "hook": "prepareRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/chat/completions",
+          "config": {
+            "apiVersion": "v1"
+          }
+        },
+        {
+          "path": "/v1/chat/completions",
+          "upstreamPath": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "model": "gemini-3.8-flash",
+          "stream": true,
+          "body": {},
+          "headers": {}
+        }
+      ],
+      "expected": {
+        "path": "/v1/models/gemini-3.8-flash:generateContent"
+      }
+    },
+    {
+      "name": "claude messages: OpenAI chat converted to Gemini",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/messages",
+          "config": {}
+        },
+        {
+          "body": {
+            "model": "gemini-3.8-flash",
+            "messages": [
+              {
+                "role": "system",
+                "content": "be brief"
+              },
+              {
+                "role": "user",
+                "content": "hi"
+              }
+            ],
+            "max_tokens": 64,
+            "reasoning_effort": "low",
+            "tools": [
+              {
+                "type": "function",
+                "function": {
+                  "name": "f",
+                  "parameters": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "a": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "model": "gemini-3.8-flash",
+          "stream": true
+        }
+      ],
+      "expected": {
+        "body": {
+          "contents": [
+            {
+              "role": "user",
+              "parts": [
+                {
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "systemInstruction": {
+            "parts": [
+              {
+                "text": "be brief"
+              }
+            ]
+          },
+          "generationConfig": {
+            "maxOutputTokens": 64,
+            "thinkingConfig": {
+              "thinkingLevel": "low",
+              "includeThoughts": true
+            }
+          },
+          "safetySettings": [
+            {
+              "category": "HARM_CATEGORY_HARASSMENT",
+              "threshold": "OFF"
+            },
+            {
+              "category": "HARM_CATEGORY_HATE_SPEECH",
+              "threshold": "OFF"
+            },
+            {
+              "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              "threshold": "OFF"
+            },
+            {
+              "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+              "threshold": "OFF"
+            }
+          ],
+          "tools": [
+            {
+              "functionDeclarations": [
+                {
+                  "name": "f",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "a": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "path": "/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse",
+        "stream": true,
+        "state": {
+          "kind": "chat",
+          "model": "gemini-3.8-flash",
+          "stream": true
+        }
+      }
+    },
+    {
+      "name": "claude path reply names the model Gemini reports",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/messages",
+          "config": {},
+          "state": {
+            "kind": "chat",
+            "model": "gemini-3.8-flash",
+            "stream": false
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"plan\",\"thought\":true},{\"text\":\"Hello\"}]},\"finishReason\":\"STOP\",\"index\":0}],\"usageMetadata\":{\"promptTokenCount\":1200,\"candidatesTokenCount\":300,\"thoughtsTokenCount\":200,\"cachedContentTokenCount\":400,\"totalTokenCount\":1700,\"promptTokensDetails\":[{\"modality\":\"TEXT\",\"tokenCount\":1000},{\"modality\":\"IMAGE\",\"tokenCount\":200}],\"candidatesTokensDetails\":[{\"modality\":\"TEXT\",\"tokenCount\":300}]},\"modelVersion\":\"gemini-3.8-flash-preview-11-2026\",\"responseId\":\"r1\"}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "id": "chatcmpl-r1",
+          "object": "chat.completion",
+          "created": 1794000000,
+          "model": "gemini-3.8-flash-preview-11-2026",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "Hello",
+                "reasoning_content": "plan"
+              },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 1200,
+            "completion_tokens": 500,
+            "total_tokens": 1700,
+            "prompt_tokens_details": {
+              "cached_tokens": 400,
+              "text_tokens": 1000,
+              "audio_tokens": 0,
+              "image_tokens": 200
+            },
+            "completion_tokens_details": {
+              "text_tokens": 300,
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 200
+            }
+          }
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "claude path stream event (mid-stream)",
+      "hook": "convertStreamEvent",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/messages",
+          "config": {},
+          "state": {
+            "kind": "chat",
+            "model": "gemini-3.8-flash",
+            "stream": true,
+            "id": "chatcmpl-r1",
+            "created": 1794000000,
+            "toolIndex": {},
+            "queries": [],
+            "sent": true
+          }
+        },
+        {
+          "data": "{\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"plan\",\"thought\":true},{\"text\":\"Hello\"}]},\"finishReason\":\"STOP\",\"index\":0}],\"usageMetadata\":{\"promptTokenCount\":1200,\"candidatesTokenCount\":300,\"thoughtsTokenCount\":200,\"cachedContentTokenCount\":400,\"totalTokenCount\":1700,\"promptTokensDetails\":[{\"modality\":\"TEXT\",\"tokenCount\":1000},{\"modality\":\"IMAGE\",\"tokenCount\":200}],\"candidatesTokensDetails\":[{\"modality\":\"TEXT\",\"tokenCount\":300}]},\"modelVersion\":\"gemini-3.8-flash-preview-11-2026\",\"responseId\":\"r1\"}"
+        }
+      ],
+      "expected": {
+        "events": [
+          {
+            "data": "{\"id\":\"chatcmpl-r1\",\"object\":\"chat.completion.chunk\",\"created\":1794000000,\"model\":\"gemini-3.8-flash-preview-11-2026\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"plan\",\"content\":\"Hello\"},\"finish_reason\":\"stop\"}]}"
+          }
+        ],
+        "state": {
+          "kind": "chat",
+          "model": "gemini-3.8-flash-preview-11-2026",
+          "stream": true,
+          "id": "chatcmpl-r1",
+          "created": 1794000000,
+          "toolIndex": {},
+          "queries": [],
+          "sent": true,
+          "usage": {
+            "promptTokenCount": 1200,
+            "candidatesTokenCount": 300,
+            "thoughtsTokenCount": 200,
+            "cachedContentTokenCount": 400,
+            "totalTokenCount": 1700,
+            "promptTokensDetails": [
+              {
+                "modality": "TEXT",
+                "tokenCount": 1000
+              },
+              {
+                "modality": "IMAGE",
+                "tokenCount": 200
+              }
+            ],
+            "candidatesTokensDetails": [
+              {
+                "modality": "TEXT",
+                "tokenCount": 300
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "claude path stream end carries usage",
+      "hook": "convertStreamEvent",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/messages",
+          "config": {},
+          "state": {
+            "kind": "chat",
+            "model": "gemini-3.8-flash-preview-11-2026",
+            "stream": true,
+            "id": "chatcmpl-r1",
+            "created": 1794000000,
+            "toolIndex": {},
+            "queries": [],
+            "sent": true,
+            "usage": {
+              "promptTokenCount": 1200,
+              "candidatesTokenCount": 300,
+              "thoughtsTokenCount": 200,
+              "cachedContentTokenCount": 400,
+              "totalTokenCount": 1700,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 1000
+                },
+                {
+                  "modality": "IMAGE",
+                  "tokenCount": 200
+                }
+              ],
+              "candidatesTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 300
+                }
+              ]
+            }
+          }
+        },
+        {
+          "done": true
+        }
+      ],
+      "expected": {
+        "events": [
+          {
+            "data": "{\"id\":\"chatcmpl-r1\",\"object\":\"chat.completion.chunk\",\"created\":1794000000,\"model\":\"gemini-3.8-flash-preview-11-2026\",\"choices\":[],\"usage\":{\"prompt_tokens\":1200,\"completion_tokens\":500,\"total_tokens\":1700,\"prompt_tokens_details\":{\"cached_tokens\":400,\"text_tokens\":1000,\"audio_tokens\":0,\"image_tokens\":200},\"completion_tokens_details\":{\"text_tokens\":300,\"audio_tokens\":0,\"image_tokens\":0,\"reasoning_tokens\":200}}}"
+          },
+          {
+            "data": "[DONE]"
+          }
+        ],
+        "state": {
+          "kind": "chat",
+          "model": "gemini-3.8-flash-preview-11-2026",
+          "stream": true,
+          "id": "chatcmpl-r1",
+          "created": 1794000000,
+          "toolIndex": {},
+          "queries": [],
+          "sent": true,
+          "usage": {
+            "promptTokenCount": 1200,
+            "candidatesTokenCount": 300,
+            "thoughtsTokenCount": 200,
+            "cachedContentTokenCount": 400,
+            "totalTokenCount": 1700,
+            "promptTokensDetails": [
+              {
+                "modality": "TEXT",
+                "tokenCount": 1000
+              },
+              {
+                "modality": "IMAGE",
+                "tokenCount": 200
+              }
+            ],
+            "candidatesTokensDetails": [
+              {
+                "modality": "TEXT",
+                "tokenCount": 300
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "openai embeddings -> batchEmbedContents",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/embeddings",
+          "config": {}
+        },
+        {
+          "body": {
+            "model": "gemini-embedding-2",
+            "input": [
+              "a",
+              "b"
+            ]
+          },
+          "model": "gemini-embedding-2",
+          "stream": false
+        }
+      ],
+      "expected": {
+        "body": {
+          "requests": [
+            {
+              "model": "models/gemini-embedding-2",
+              "content": {
+                "parts": [
+                  {
+                    "text": "a"
+                  }
+                ]
+              }
+            },
+            {
+              "model": "models/gemini-embedding-2",
+              "content": {
+                "parts": [
+                  {
+                    "text": "b"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "path": "/v1beta/models/gemini-embedding-2:batchEmbedContents",
+        "stream": false,
+        "state": {
+          "kind": "embed",
+          "model": "gemini-embedding-2"
+        }
+      }
+    },
+    {
+      "name": "embeddings reply",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/embeddings",
+          "config": {},
+          "state": {
+            "kind": "embed",
+            "model": "gemini-embedding-2"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"embeddings\":[{\"values\":[0.1,0.2]}],\"usageMetadata\":{\"promptTokenCount\":3,\"totalTokenCount\":3}}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "object": "list",
+          "data": [
+            {
+              "object": "embedding",
+              "embedding": [
+                0.1,
+                0.2
+              ],
+              "index": 0
+            }
+          ],
+          "model": "gemini-embedding-2",
+          "usage": {
+            "prompt_tokens": 3,
+            "completion_tokens": 0,
+            "total_tokens": 3,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "text_tokens": 3,
+              "audio_tokens": 0,
+              "image_tokens": 0
+            },
+            "completion_tokens_details": {
+              "text_tokens": 0,
+              "audio_tokens": 0,
+              "image_tokens": 0,
+              "reasoning_tokens": 0
+            }
+          }
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "openai images -> generateContent on an image model",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/images/generations",
+          "config": {}
+        },
+        {
+          "body": {
+            "model": "gemini-3.1-flash-lite-image",
+            "prompt": "a red cube",
+            "n": 2,
+            "size": "1792x1024"
+          },
+          "model": "gemini-3.1-flash-lite-image",
+          "stream": false
+        }
+      ],
+      "expected": {
+        "body": {
+          "contents": [
+            {
+              "role": "user",
+              "parts": [
+                {
+                  "text": "a red cube"
+                }
+              ]
+            }
+          ],
+          "generationConfig": {
+            "responseModalities": [
+              "IMAGE"
+            ],
+            "imageConfig": {
+              "aspectRatio": "16:9",
+              "imageSize": "2K"
+            }
+          },
+          "safetySettings": [
+            {
+              "category": "HARM_CATEGORY_HARASSMENT",
+              "threshold": "OFF"
+            },
+            {
+              "category": "HARM_CATEGORY_HATE_SPEECH",
+              "threshold": "OFF"
+            },
+            {
+              "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              "threshold": "OFF"
+            },
+            {
+              "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+              "threshold": "OFF"
+            }
+          ]
+        },
+        "path": "/v1beta/models/gemini-3.1-flash-lite-image:generateContent",
+        "stream": false,
+        "state": {
+          "kind": "image",
+          "model": "gemini-3.1-flash-lite-image",
+          "path": "/v1beta/models/gemini-3.1-flash-lite-image:generateContent",
+          "body": {
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "a red cube"
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {
+              "responseModalities": [
+                "IMAGE"
+              ],
+              "imageConfig": {
+                "aspectRatio": "16:9",
+                "imageSize": "2K"
+              }
+            },
+            "safetySettings": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "OFF"
+              }
+            ]
+          },
+          "n": 2,
+          "images": [],
+          "usage": {}
+        }
+      }
+    },
+    {
+      "name": "second image is requested before answering",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/images/generations",
+          "config": {},
+          "state": {
+            "kind": "image",
+            "model": "gemini-3.1-flash-lite-image",
+            "path": "/v1beta/models/gemini-3.1-flash-lite-image:generateContent",
+            "body": {
+              "contents": [
+                {
+                  "role": "user",
+                  "parts": [
+                    {
+                      "text": "a red cube"
+                    }
+                  ]
+                }
+              ],
+              "generationConfig": {
+                "responseModalities": [
+                  "IMAGE"
+                ],
+                "imageConfig": {
+                  "aspectRatio": "1:1"
+                }
+              },
+              "safetySettings": [
+                {
+                  "category": "HARM_CATEGORY_HARASSMENT",
+                  "threshold": "OFF"
+                },
+                {
+                  "category": "HARM_CATEGORY_HATE_SPEECH",
+                  "threshold": "OFF"
+                },
+                {
+                  "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                  "threshold": "OFF"
+                },
+                {
+                  "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                  "threshold": "OFF"
+                }
+              ]
+            },
+            "n": 2,
+            "images": [],
+            "usage": {}
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"mimeType\":\"image/png\",\"data\":\"iVBORw0KGgo=\"}}]},\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":8,\"candidatesTokenCount\":1120,\"totalTokenCount\":1128,\"promptTokensDetails\":[{\"modality\":\"TEXT\",\"tokenCount\":8}],\"candidatesTokensDetails\":[{\"modality\":\"IMAGE\",\"tokenCount\":1120}]},\"modelVersion\":\"gemini-3.1-flash-lite-image\"}"
+        }
+      ],
+      "expected": {
+        "next": {
+          "method": "POST",
+          "path": "/v1beta/models/gemini-3.1-flash-lite-image:generateContent",
+          "body": {
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "a red cube"
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {
+              "responseModalities": [
+                "IMAGE"
+              ],
+              "imageConfig": {
+                "aspectRatio": "1:1"
+              }
+            },
+            "safetySettings": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "OFF"
+              }
+            ]
+          }
+        },
+        "state": {
+          "kind": "image",
+          "model": "gemini-3.1-flash-lite-image",
+          "path": "/v1beta/models/gemini-3.1-flash-lite-image:generateContent",
+          "body": {
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "a red cube"
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {
+              "responseModalities": [
+                "IMAGE"
+              ],
+              "imageConfig": {
+                "aspectRatio": "1:1"
+              }
+            },
+            "safetySettings": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "OFF"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "OFF"
+              }
+            ]
+          },
+          "n": 2,
+          "images": [
+            "iVBORw0KGgo="
+          ],
+          "usage": {
+            "input_tokens": 8,
+            "output_tokens": 1120,
+            "input_text": 8,
+            "input_image": 0,
+            "output_text": 0,
+            "output_image": 1120,
+            "reasoning": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "model list asks for the next page",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/models",
+          "config": {},
+          "state": null
+        },
+        {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"models\":[{\"name\":\"models/gemini-3.8-flash\",\"supportedGenerationMethods\":[\"generateContent\"]},{\"name\":\"models/gemini-3.8-live\",\"supportedGenerationMethods\":[\"bidiGenerateContent\"]}],\"nextPageToken\":\"p2\"}"
+        }
+      ],
+      "expected": {
+        "next": {
+          "method": "GET",
+          "path": "/v1beta/models?pageSize=1000&pageToken=p2"
+        },
+        "state": {
+          "kind": "models",
+          "ids": [
+            "gemini-3.8-flash"
+          ]
+        }
+      }
+    },
+    {
+      "name": "model list last page adds the task models",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/models",
+          "config": {},
+          "state": {
+            "kind": "models",
+            "ids": [
+              "gemini-3.8-flash"
+            ]
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"models\":[{\"name\":\"models/gemini-embedding-2\",\"supportedGenerationMethods\":[\"embedContent\"]}]}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "object": "list",
+          "data": [
+            {
+              "id": "gemini-3.8-flash",
+              "object": "model",
+              "owned_by": "google"
+            },
+            {
+              "id": "gemini-embedding-2",
+              "object": "model",
+              "owned_by": "google"
+            },
+            {
+              "id": "gemini-omni-1.2-flash",
+              "object": "model",
+              "owned_by": "google"
+            },
+            {
+              "id": "gemini-omni-1.1-flash",
+              "object": "model",
+              "owned_by": "google"
+            },
+            {
+              "id": "gemini-decision-1",
+              "object": "model",
+              "owned_by": "google"
+            }
+          ]
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "upstream error passes through",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/messages",
+          "config": {},
+          "state": {
+            "kind": "chat",
+            "model": "gemini-3.8-flash"
+          }
+        },
+        {
+          "status": 429,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"error\":{\"code\":429,\"message\":\"quota\"}}"
+        }
+      ],
+      "expected": {
+        "body": "{\"error\":{\"code\":429,\"message\":\"quota\"}}",
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "key in query when configured",
+      "hook": "signRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "credential": null,
+          "apiKey": "K",
+          "config": {
+            "keyInQuery": true
+          }
+        },
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/x:generateContent",
+          "headers": {},
+          "bodySha256": ""
+        }
+      ],
+      "expected": {
+        "query": {
+          "key": "K"
+        }
+      }
+    },
+    {
+      "name": "key only in header by default",
+      "hook": "signRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "credential": null,
+          "apiKey": "K",
+          "config": {}
+        },
+        {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/x:generateContent",
+          "headers": {},
+          "bodySha256": ""
+        }
+      ],
+      "expected": {}
+    },
+    {
+      "name": "native paths never reach convertRequest",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "config": {}
+        },
+        {
+          "body": {},
+          "model": "gemini-3.8-flash",
+          "stream": false
+        }
+      ],
+      "expectedError": "unsupported path"
+    },
+    {
+      "name": "image generation needs a Gemini image model",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/images/generations",
+          "config": {}
+        },
+        {
+          "body": {
+            "prompt": "x"
+          },
+          "model": "gemini-3.8-flash",
+          "stream": false
+        }
+      ],
+      "expectedError": "Gemini image model"
+    },
+    {
+      "name": "model names cannot change the upstream path",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/messages",
+          "config": {}
+        },
+        {
+          "body": {},
+          "model": "../x",
+          "stream": false
+        }
+      ],
+      "expectedError": "invalid model name"
     }
   ]
 }
