@@ -6,17 +6,17 @@ locale: zh-CN
 
 [English](README.md) | **简体中文**
 
-用一个 new-api 渠道和 Google AI Studio 密钥接入 Gemini API：Gemini 文本模型（Gemini 原生、OpenAI Chat Completions、OpenAI Responses、Claude Messages 接口，均支持流式）、向量、Gemini 图像模型生图、Gemini Omni Flash 视频和 Gemini Decision 1。渠道的模型列表可从 Gemini API 获取。
+用一个 new-api 渠道和 Google AI Studio 密钥接入 Gemini API：Gemini 文本模型（Gemini 原生、OpenAI Chat Completions、OpenAI Responses、Claude Messages 接口，均支持流式）、向量、Gemini 图像模型生图、Gemini Omni Flash 视频和 Gemini Decision 1。渠道的模型列表可从 Gemini API 获取。上游也可以是以 OpenAI 接口提供 Gemini 模型的中转。
 
 需要 new-api v1.0.0-rc.50 或更高版本（已在 v1.0.0-rc.51 和 new-api-horizon 0.7.0-rc.12 上测试）。
 
 ## 渠道设置
 
 1. 安装插件，新建类型为「任务插件」的渠道并绑定 `byaiden_gemini`。
-2. Base URL：留空即 `https://generativelanguage.googleapis.com`，也可以填兼容 Gemini API 的中转地址。
+2. Base URL：留空即 `https://generativelanguage.googleapis.com`，也可以填兼容 Gemini API 的中转地址。中转使用 OpenAI 接口时，见[上游为 OpenAI 兼容中转](#上游为-openai-兼容中转)。
 3. 密钥：Google AI Studio 的 Gemini API 密钥，多个密钥每行一个。Gemini Omni 和部分文本模型需要付费层级的项目。
 4. 模型：点「获取模型列表」会列出该密钥能经本渠道使用的全部模型（文本、向量、图像模型，以及 Gemini Omni 和 Gemini Decision），保留要售卖的即可。模型只有出现在已启用渠道的模型列表里，才会显示在定价页面。
-5. 可选渠道设置：API 版本（默认 `v1beta`，与内置 Gemini 渠道一致；作用于文本、向量和图像请求），以及「同时以 ?key= 发送密钥」，用于只从查询参数读取密钥的中转。
+5. 可选渠道设置：上游类型（默认 Gemini 官方 API，也可选 OpenAI 兼容中转，见下文）、API 版本（默认 `v1beta`，与内置 Gemini 渠道一致；作用于文本、向量和图像请求），以及「同时以 ?key= 发送密钥」，用于只从查询参数读取密钥的中转。
 
 在渠道表单里选择本插件时，渠道的模型列表会被替换成插件的列表。把已有渠道改用本插件时，先复制它的「模型」字段，选好插件后再粘贴回去；模型重定向、分组和优先级会保留。
 
@@ -148,6 +148,25 @@ curl https://your-gateway.example.com/v1beta/decisions \
 - 另一个网关新建 **New API** 渠道（类型 60），Base URL 填第一个网关的地址，密钥填第一个网关的令牌，在「上游任务插件」中选择 `byaiden_gemini` 并添加模型。
 
 文本请求作为普通请求经 New API 渠道转发，在每个网关按上文分别定价。Gemini Omni 发往第一个网关的 `POST /v1/videos`（令牌作 Bearer 密钥），在那里的 `GET /v1/videos/{id}` 查询，从 `GET /v1/videos/{id}/content` 下载；客户端可在外层网关使用 `/v1/videos` 或 `/v1/responses`。Gemini Decision 发往第一个网关的 `/byaiden_gemini/v1beta/decisions`。两个网关对 Gemini Omni 和 Gemini Decision 的预扣与结算方式相同：第一个网关完成的视频对象带有计费用的 `usage`（`input_tokens`、`output_tokens`、`video_tokens`），Decision 回复带有 `usage.total_input_tokens`，因此上面的表达式在两个网关按相同用量计费。
+
+## 上游为 OpenAI 兼容中转
+
+上游是以 OpenAI 接口提供 Gemini 模型的中转时，把渠道设置「上游类型」设为「OpenAI 兼容中转」。Base URL 填中转的根地址（例如 `https://relay.example.com`，不带 `/v1`），密钥填中转的 Key，以 `Authorization: Bearer` 发送。默认的「Gemini 官方 API」与上文所述相同；API 版本和 `?key=` 两项设置只对它生效。中转渠道的 Base URL 留空或填 Google 地址时，保存会失败并给出提示。
+
+| 客户端接口 | 发往中转的请求 |
+| --- | --- |
+| Gemini `generateContent`、`streamGenerateContent` | OpenAI `POST /v1/chat/completions`，客户端流式时也以流式请求；回复和流以 Gemini 格式返回 |
+| OpenAI Chat Completions、OpenAI Responses | new-api 像在 Gemini API 上一样先转成 Gemini 请求，插件再以 OpenAI `POST /v1/chat/completions` 发出，客户端收到自己的格式 |
+| Claude Messages | OpenAI `POST /v1/chat/completions`（new-api 自带的 Claude 转换） |
+| Gemini `embedContent`、`batchEmbedContents` | OpenAI `POST /v1/embeddings`（文本输入） |
+| OpenAI 向量、生成图像 | 原样发往 `POST /v1/embeddings` 和 `POST /v1/images/generations` |
+| 获取模型列表 | `GET /v1/models`，模型 ID 与中转列出的一致 |
+
+模型名按渠道的上游模型发给中转，中转回复里的模型名原样传回。
+
+中转渠道按中转返回的 OpenAI `usage` 计费：`prompt_tokens` 计为输入（其中 `cached_tokens` 计为缓存输入，`audio_tokens` 计为音频输入），`completion_tokens` 计为输出，含推理 token。流式请求会以 `stream_options.include_usage` 向中转索取用量；中转不返回用量时由 new-api 估算。上文的表达式变量同样适用，按中转向你收取的价格定价即可。
+
+中转渠道不支持以下内容，请求在发出前即被拒绝（不计费）：Gemini Omni 和 Gemini Decision（不要把这些模型加到中转渠道；`/v1/videos` 和 `/v1beta/decisions` 会说明原因，经 `/v1/responses` 调用 Omni 时返回 `Invalid task protocol request`），以及（提示具体字段）Google 搜索、代码执行和 URL 上下文工具、经 `generateContent` 输出图像或音频（生图请用 `/v1/images/generations`）、缓存内容、Files API 引用、`responseLogprobs`、超过 4 个停止序列，以及 PNG、JPEG、WebP、GIF 图片、WAV、MP3 音频和 PDF 以外的媒体。`topK`、`safetySettings`、`taskType` 和 `title` 不会发送。思考预算按最接近的 `reasoning_effort` 发送（`0` 为 `none`，不超过 512 为 `minimal`，不超过 1,024 为 `low`，不超过 8,192 为 `medium`，更高为 `high`），对话历史中之前的思考内容不会回传。
 
 ## 限制
 

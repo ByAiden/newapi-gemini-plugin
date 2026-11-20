@@ -7,7 +7,7 @@ export const meta = {
     "en": "Gemini API on one channel: text, embeddings, images, Omni video, Decision",
     "zh": "Gemini API 单渠道：文本、向量、图像、Omni 视频与 Decision"
   },
-  "version": "2.0.0",
+  "version": "2.1.0",
   "author": { "name": "ByAiden", "url": "https://github.com/ByAiden" },
   "website": "https://aistudio.google.com/docs/models",
   "baseUrl": "https://generativelanguage.googleapis.com",
@@ -95,14 +95,14 @@ export const meta = {
     }
   ],
   "relay": [
-    { "incoming_path": "/v1beta/models/{model}:generateContent", "upstream_path": "/v1beta/models/{model}:generateContent", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
-    { "incoming_path": "/v1/models/{model}:generateContent", "upstream_path": "/v1beta/models/{model}:generateContent", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
-    { "incoming_path": "/v1beta/models/{model}:embedContent", "upstream_path": "/v1beta/models/{model}:embedContent", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
-    { "incoming_path": "/v1/models/{model}:embedContent", "upstream_path": "/v1beta/models/{model}:embedContent", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
-    { "incoming_path": "/v1beta/models/{model}:batchEmbedContents", "upstream_path": "/v1beta/models/{model}:batchEmbedContents", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
-    { "incoming_path": "/v1/models/{model}:batchEmbedContents", "upstream_path": "/v1beta/models/{model}:batchEmbedContents", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
-    { "incoming_path": "/v1/chat/completions", "upstream_path": "/v1beta/models/{model}:generateContent", "converter": "openai_chat_completions_to_gemini_generate_content", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
-    { "incoming_path": "/v1/responses", "upstream_path": "/v1beta/models/{model}:generateContent", "converter": "openai_responses_to_gemini_generate_content", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
+    { "incoming_path": "/v1beta/models/{model}:generateContent", "upstream_path": "/v1beta/models/{model}:generateContent", "converter": "plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
+    { "incoming_path": "/v1/models/{model}:generateContent", "upstream_path": "/v1beta/models/{model}:generateContent", "converter": "plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
+    { "incoming_path": "/v1beta/models/{model}:embedContent", "upstream_path": "/v1beta/models/{model}:embedContent", "converter": "plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
+    { "incoming_path": "/v1/models/{model}:embedContent", "upstream_path": "/v1beta/models/{model}:embedContent", "converter": "plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
+    { "incoming_path": "/v1beta/models/{model}:batchEmbedContents", "upstream_path": "/v1beta/models/{model}:batchEmbedContents", "converter": "plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
+    { "incoming_path": "/v1/models/{model}:batchEmbedContents", "upstream_path": "/v1beta/models/{model}:batchEmbedContents", "converter": "plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
+    { "incoming_path": "/v1/chat/completions", "upstream_path": "/v1beta/models/{model}:generateContent", "converter": "openai_chat_completions_to_gemini_generate_content+plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
+    { "incoming_path": "/v1/responses", "upstream_path": "/v1beta/models/{model}:generateContent", "converter": "openai_responses_to_gemini_generate_content+plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
     { "incoming_path": "/v1/messages", "upstream_path": "/v1beta/models/{model}:generateContent", "converter": "anthropic_messages_to_openai_chat_completions+plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
     { "incoming_path": "/v1/embeddings", "upstream_path": "/v1beta/models/{model}:batchEmbedContents", "converter": "plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
     { "incoming_path": "/v1/images/generations", "upstream_path": "/v1beta/models/{model}:generateContent", "converter": "plugin", "auth": { "type": "header", "name": "x-goog-api-key", "value": "{api_key}" } },
@@ -111,6 +111,20 @@ export const meta = {
   "channelConfig": {
     "type": "object",
     "properties": {
+      "upstreamType": {
+        "type": "string",
+        "title": { "en": "Upstream type", "zh": "上游类型" },
+        "description": {
+          "en": "Gemini API: the Base URL is Google's (blank = https://generativelanguage.googleapis.com) or a relay that speaks the Gemini API. OpenAI-compatible relay: the Base URL is a relay that serves Gemini models over OpenAI's API; text, embedding and image requests go there, Gemini Omni and Gemini Decision are not available.",
+          "zh": "Gemini API：Base URL 为 Google 官方地址（留空即 https://generativelanguage.googleapis.com）或兼容 Gemini API 的中转。OpenAI 兼容中转：Base URL 填以 OpenAI 接口提供 Gemini 模型的中转地址，文本、向量和图像请求发往该地址，Gemini Omni 与 Gemini Decision 不可用。"
+        },
+        "enum": ["gemini", "openai"],
+        "enumTitles": [
+          { "en": "Gemini API", "zh": "Gemini 官方 API" },
+          { "en": "OpenAI-compatible relay", "zh": "OpenAI 兼容中转" }
+        ],
+        "default": "gemini"
+      },
       "apiVersion": {
         "type": "string",
         "title": { "en": "API version", "zh": "API 版本" },
@@ -119,7 +133,8 @@ export const meta = {
           "zh": "文本、向量与图像请求上游路径中的 Gemini API 版本"
         },
         "enum": ["v1beta", "v1", "v1alpha"],
-        "default": "v1beta"
+        "default": "v1beta",
+        "visibleWhen": { "upstreamType": "gemini" }
       },
       "keyInQuery": {
         "type": "boolean",
@@ -128,13 +143,14 @@ export const meta = {
           "en": "For relays that only read the key from the query string; the x-goog-api-key header is always sent",
           "zh": "用于只从查询参数读取密钥的中转；x-goog-api-key 请求头始终会发送"
         },
-        "default": false
+        "default": false,
+        "visibleWhen": { "upstreamType": "gemini" }
       }
     }
   },
   "keyHint": {
-    "en": "Gemini API key, one per line",
-    "zh": "Gemini API 密钥，每行一个"
+    "en": "Gemini API key, one per line; the relay's key when Upstream type is OpenAI-compatible relay",
+    "zh": "Gemini API 密钥，每行一个；上游类型为 OpenAI 兼容中转时填中转的 Key"
   }
 };
 
@@ -701,6 +717,7 @@ export const native = {
 };
 
 export function buildSubmitRequest(ctx) {
+  if (!viaGateway(ctx) && upstreamType(ctx) === UPSTREAM_OPENAI) throw new Error(TASK_RELAY_ERROR);
   if (isDecision(ctx)) return decisionRequest(ctx);
   if (!omniModel(ctx)) throw new Error("unsupported model; use gemini-omni-1.2-flash, gemini-omni-1.1-flash or gemini-decision-1");
   return viaGateway(ctx) ? gatewaySubmitRequest(ctx) : omniSubmitRequest(ctx);
@@ -948,6 +965,9 @@ protocols.openai_video = {
 //   - OpenAI embeddings become batchEmbedContents; OpenAI image generation
 //     becomes generateContent on a Gemini image model.
 //   - The model list reads every page of the Gemini model list.
+//   - Native, chat and Responses routes run the convert hooks only to send
+//     the request on unchanged (nativeResponse), so that an OpenAI-compatible
+//     relay channel (upstream type "openai", below) can convert them.
 
 const DEFAULT_API_VERSION = "v1beta";
 const API_VERSIONS = ["v1beta", "v1", "v1alpha"];
@@ -1014,6 +1034,7 @@ function generatePath(ctx, model, stream) {
 // action for a native streamGenerateContent client, and the configured API
 // version. Nothing else of the request changes.
 export function prepareRequest(ctx, request) {
+  if (relayMode(ctx)) return null;
   const upstream = String((request && request.upstreamPath) || "");
   const version = apiVersion(ctx);
   const client = String((request && request.path) || (ctx && ctx.path) || "").split("?")[0];
@@ -1028,6 +1049,7 @@ export function prepareRequest(ctx, request) {
 
 // Optional ?key= for relays that read the key from the query string.
 export function signRequest(ctx) {
+  if (relayMode(ctx)) return ctx.apiKey ? { headers: { Authorization: "Bearer " + String(ctx.apiKey) } } : {};
   if (isObject(ctx.config) && ctx.config.keyInQuery === true && ctx.apiKey) {
     return { query: { key: String(ctx.apiKey) } };
   }
@@ -1038,9 +1060,16 @@ export function signRequest(ctx) {
 // Request conversion (plugin-converted routes)
 
 export function convertRequest(ctx, request) {
-  const path = String(ctx.path || "");
+  const path = String(ctx.path || "").split("?")[0];
   const model = request.model;
   const stream = request.stream === true;
+  if (relayMode(ctx)) return relayRequest(path, request, model, stream);
+  // Gemini native requests, and the Gemini request new-api built for OpenAI
+  // chat and Responses clients, go to the Gemini API unchanged; the reply
+  // goes to new-api's Gemini handling as it came.
+  if (NATIVE_PATH.test(path) || path === "/v1/chat/completions" || path === "/v1/responses") {
+    return { body: request.body, stream: stream, nativeResponse: true };
+  }
   switch (path) {
     case "/v1/messages":
       // new-api already turned the Claude request into an OpenAI chat request.
@@ -1078,6 +1107,9 @@ export function convertResponse(ctx, response) {
   const state = isObject(ctx.state) ? ctx.state : null;
   const status = Number(response.status) || 0;
   const success = status >= 200 && status < 300;
+  if (relayMode(ctx) && (String(ctx.path || "") === "/v1/models" || (state && state.kind === KIND_RELAY_MODELS))) {
+    return relayModelList(response, state);
+  }
   if (String(ctx.path || "") === "/v1/models" || (state && state.kind === KIND_MODELS)) {
     return convertModelList(response, state);
   }
@@ -1096,6 +1128,10 @@ export function convertResponse(ctx, response) {
       return geminiToEmbeddings(parsed, state.model);
     case KIND_IMAGE:
       return geminiToImages(parsed, state);
+    case KIND_RELAY_GENERATE:
+      return chatReplyToGemini(parsed, state.model);
+    case KIND_RELAY_EMBED:
+      return openAIEmbeddingsToGemini(parsed, state.batch === true);
     default:
       return { body: response.body, contentType: "application/json" };
   }
@@ -1104,6 +1140,7 @@ export function convertResponse(ctx, response) {
 export function convertStreamEvent(ctx, input) {
   const state = isObject(ctx.state) ? ctx.state : {};
   if (state.kind === KIND_CHAT) return chatStreamEvent(state, input);
+  if (state.kind === KIND_RELAY_GENERATE) return relayStreamEvent(state, input);
   if (input.done) return {};
   if (input.dataBase64 !== undefined) return { chunks: [{ bodyBase64: input.dataBase64 }] };
   const event = { data: String(input.data === undefined ? "" : input.data) };
@@ -1868,4 +1905,625 @@ function geminiToImages(reply, state) {
     };
   }
   return { body: body, contentType: "application/json" };
+}
+
+// ---------------------------------------------------------------------------
+// Upstream type "openai": an OpenAI-compatible relay that serves Gemini models
+// (channel setting upstreamType; the channel Base URL is the relay's root and
+// the key goes as Authorization: Bearer).
+//
+//   - Gemini native generateContent / streamGenerateContent, and the Gemini
+//     request new-api builds for OpenAI chat completions and OpenAI Responses
+//     clients, become an OpenAI chat request to the relay's
+//     /v1/chat/completions; its reply and stream come back as Gemini replies
+//     and events, usage included, for new-api's own Gemini handling.
+//   - Claude Messages (already OpenAI chat), OpenAI embeddings and OpenAI image
+//     generation go to the relay's OpenAI paths as they are and its replies
+//     to new-api's OpenAI handling.
+//   - Gemini embedContent / batchEmbedContents become OpenAI embeddings.
+//   - The model list is the relay's /v1/models.
+//   - Gemini Omni and Gemini Decision need the Gemini API and are refused.
+// Model names are passed on and reported as the relay gives them.
+
+const UPSTREAM_GEMINI = "gemini";
+const UPSTREAM_OPENAI = "openai";
+const RELAY_CHAT_PATH = "/v1/chat/completions";
+const RELAY_EMBEDDINGS_PATH = "/v1/embeddings";
+const RELAY_IMAGES_PATH = "/v1/images/generations";
+const RELAY_MODELS_PATH = "/v1/models";
+const RELAY_MAX_STOP_SEQUENCES = 4;
+const GOOGLE_HOST = /(^|\.)googleapis\.com$/;
+const NATIVE_PATH = /^\/(v1beta|v1)\/models\/([^/:]+):(generateContent|streamGenerateContent|embedContent|batchEmbedContents)$/;
+
+const KIND_RELAY_GENERATE = "relay_generate"; // Gemini request <-> OpenAI chat on the relay
+const KIND_RELAY_EMBED = "relay_embed"; // Gemini embedContent / batchEmbedContents <-> OpenAI embeddings
+const KIND_RELAY_PASS = "relay_pass"; // OpenAI request sent to the relay as it is
+const KIND_RELAY_MODELS = "relay_models"; // the relay's /v1/models
+
+const TASK_RELAY_ERROR = "Gemini Omni and Gemini Decision need the Gemini API; this channel's upstream type is an OpenAI-compatible relay. Serve these models from a channel whose upstream type is Gemini API.";
+
+// The channel setting: the Gemini API, or an OpenAI-compatible relay.
+export function upstreamType(ctx) {
+  const config = ctx && isObject(ctx.config) ? ctx.config : {};
+  return config.upstreamType === UPSTREAM_OPENAI ? UPSTREAM_OPENAI : UPSTREAM_GEMINI;
+}
+
+function relayMode(ctx) {
+  return upstreamType(ctx) === UPSTREAM_OPENAI;
+}
+
+function hostOf(url) {
+  const match = /^https?:\/\/([^/:?#]+)/i.exec(String(url || "").trim());
+  return match ? match[1].toLowerCase() : "";
+}
+
+// An OpenAI-compatible relay needs its own Base URL; Google's host does not
+// speak the relay's protocol with a relay key.
+export function checkKey(ctx, key) {
+  if (!relayMode(ctx)) return;
+  const host = hostOf(ctx && ctx.baseUrl) || "generativelanguage.googleapis.com";
+  if (GOOGLE_HOST.test(host)) {
+    return {
+      error: {
+        en: "Upstream type is OpenAI-compatible relay: set the channel Base URL to the relay's address, not " + host + ".",
+        zh: "上游类型为 OpenAI 兼容中转：请把渠道 Base URL 填为中转地址，而不是 " + host + "。",
+      },
+    };
+  }
+  if (String(key || "").trim() === "") return { error: { en: "The relay key is empty.", zh: "中转 Key 为空。" } };
+}
+
+function pick(object, camel, snake) {
+  if (!isObject(object)) return undefined;
+  return object[camel] !== undefined ? object[camel] : object[snake];
+}
+
+function copyWith(body, extra) {
+  if (!isObject(body)) throw requestError("request body must be a JSON object");
+  return Object.assign({}, body, extra);
+}
+
+// OpenAI requests the relay takes as they are, with the upstream model.
+function passThrough(body, model, path, stream, chat) {
+  const extra = { model: model };
+  if (chat && stream) {
+    extra.stream = true;
+    extra.stream_options = Object.assign({}, isObject(body && body.stream_options) ? body.stream_options : {}, { include_usage: true });
+  }
+  return { body: copyWith(body, extra), path: path, stream: stream, nativeResponse: true, state: { kind: KIND_RELAY_PASS } };
+}
+
+function relayRequest(path, request, model, stream) {
+  const native = NATIVE_PATH.exec(path);
+  if (native && (native[3] === "embedContent" || native[3] === "batchEmbedContents")) {
+    const batch = native[3] === "batchEmbedContents";
+    return {
+      body: geminiEmbedToOpenAI(request.body, model, batch),
+      path: RELAY_EMBEDDINGS_PATH,
+      stream: false,
+      state: { kind: KIND_RELAY_EMBED, batch: batch },
+    };
+  }
+  if (native || path === "/v1/chat/completions" || path === "/v1/responses") {
+    return {
+      body: geminiToOpenAIChat(request.body, model, stream),
+      path: RELAY_CHAT_PATH,
+      stream: stream,
+      state: { kind: KIND_RELAY_GENERATE, model: model, stream: stream },
+    };
+  }
+  switch (path) {
+    case "/v1/messages":
+      return passThrough(request.body, model, RELAY_CHAT_PATH, stream, true);
+    case "/v1/embeddings":
+      return passThrough(request.body, model, RELAY_EMBEDDINGS_PATH, false, false);
+    case "/v1/images/generations":
+      return passThrough(request.body, model, RELAY_IMAGES_PATH, false, false);
+    default:
+      throw requestError("unsupported path for this channel: " + path);
+  }
+}
+
+// ---- Gemini request -> OpenAI chat request ----
+
+const GEMINI_REQUEST_FIELDS = ["contents", "systemInstruction", "system_instruction", "generationConfig", "generation_config",
+  "tools", "toolConfig", "tool_config", "safetySettings", "safety_settings", "labels", "model"];
+const CHAT_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const AUDIO_FORMATS = { "audio/wav": "wav", "audio/x-wav": "wav", "audio/wave": "wav", "audio/mp3": "mp3", "audio/mpeg": "mp3" };
+const THINKING_LEVELS = ["minimal", "low", "medium", "high"];
+
+function relayUnsupported(what) {
+  return requestError(what + " is not supported when the channel's upstream type is an OpenAI-compatible relay");
+}
+
+function mimeOf(data) {
+  const mime = String(pick(data, "mimeType", "mime_type") || "").trim().toLowerCase();
+  return mime === "image/jpg" ? "image/jpeg" : mime;
+}
+
+// One Gemini media part as an OpenAI chat content part.
+function relayMediaPart(part, where) {
+  const inline = pick(part, "inlineData", "inline_data");
+  if (isObject(inline)) {
+    const mime = mimeOf(inline);
+    const data = String(inline.data || "");
+    if (CHAT_IMAGE_TYPES.indexOf(mime) >= 0) return { type: "image_url", image_url: { url: "data:" + mime + ";base64," + data } };
+    if (AUDIO_FORMATS[mime]) return { type: "input_audio", input_audio: { data: data, format: AUDIO_FORMATS[mime] } };
+    if (mime === "application/pdf") return { type: "file", file: { filename: "document.pdf", file_data: "data:application/pdf;base64," + data } };
+    throw relayUnsupported(where + ": inline data of type " + JSON.stringify(mime));
+  }
+  const file = pick(part, "fileData", "file_data");
+  const uri = String(pick(file, "fileUri", "file_uri") || "").trim();
+  const mime = mimeOf(file);
+  if (!/^https?:\/\//i.test(uri) || GOOGLE_HOST.test(hostOf(uri))) throw relayUnsupported(where + ": a file reference other than a public image URL");
+  if (mime && CHAT_IMAGE_TYPES.indexOf(mime) < 0) throw relayUnsupported(where + ": a file reference of type " + JSON.stringify(mime));
+  return { type: "image_url", image_url: { url: uri } };
+}
+
+// Gemini's OpenAPI schema subset (upper-case types, nullable) as JSON Schema.
+export function jsonSchemaOf(schema) {
+  if (Array.isArray(schema)) return schema.map(jsonSchemaOf);
+  if (!isObject(schema)) return schema;
+  const out = {};
+  for (const key of Object.keys(schema)) {
+    if (key === "nullable" || key === "propertyOrdering") continue;
+    const value = schema[key];
+    if (key === "type" && typeof value === "string") out.type = value.toLowerCase();
+    else if (key === "properties" && isObject(value)) {
+      out.properties = {};
+      for (const name of Object.keys(value)) out.properties[name] = jsonSchemaOf(value[name]);
+    } else if (key === "items" || key === "anyOf") out[key] = jsonSchemaOf(value);
+    else out[key] = value;
+  }
+  if (schema.nullable === true && typeof out.type === "string") out.type = [out.type, "null"];
+  return out;
+}
+
+function relayTools(tools) {
+  if (tools === undefined || tools === null) return undefined;
+  if (!Array.isArray(tools)) throw requestError("tools must be an array");
+  const out = [];
+  for (const tool of tools) {
+    if (!isObject(tool)) throw requestError("each tool must be an object");
+    for (const key of Object.keys(tool)) {
+      if (key !== "functionDeclarations" && key !== "function_declarations") throw relayUnsupported("the Gemini tool " + key);
+    }
+    const declarations = pick(tool, "functionDeclarations", "function_declarations") || [];
+    if (!Array.isArray(declarations)) throw requestError("functionDeclarations must be an array");
+    for (const fn of declarations) {
+      if (!isObject(fn) || typeof fn.name !== "string" || fn.name === "") throw requestError("each function declaration needs a name");
+      const definition = { name: fn.name };
+      if (typeof fn.description === "string") definition.description = fn.description;
+      const jsonSchema = pick(fn, "parametersJsonSchema", "parameters_json_schema");
+      if (jsonSchema !== undefined) definition.parameters = jsonSchema;
+      else if (fn.parameters !== undefined) definition.parameters = jsonSchemaOf(fn.parameters);
+      out.push({ type: "function", function: definition });
+    }
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function relayToolChoice(toolConfig) {
+  const config = pick(toolConfig, "functionCallingConfig", "function_calling_config");
+  if (!isObject(config)) return undefined;
+  const mode = String(config.mode || "").toUpperCase();
+  const allowed = pick(config, "allowedFunctionNames", "allowed_function_names");
+  if (mode === "NONE") return "none";
+  if (mode === "ANY") {
+    if (Array.isArray(allowed) && allowed.length === 1) return { type: "function", function: { name: String(allowed[0]) } };
+    return "required";
+  }
+  return mode === "AUTO" || mode === "VALIDATED" || mode === "" ? undefined : "auto";
+}
+
+// thinkingLevel goes over as reasoning_effort; a token budget takes the
+// nearest effort (0 = none, -1 = the relay's default).
+function relayReasoningEffort(thinking) {
+  if (!isObject(thinking)) return undefined;
+  const level = String(pick(thinking, "thinkingLevel", "thinking_level") || "").toLowerCase();
+  if (level) {
+    if (THINKING_LEVELS.indexOf(level) < 0) throw requestError("unknown thinkingLevel " + JSON.stringify(level));
+    return level;
+  }
+  const budget = pick(thinking, "thinkingBudget", "thinking_budget");
+  if (typeof budget !== "number" || budget < 0) return undefined;
+  if (budget === 0) return "none";
+  if (budget <= THINKING_BUDGETS.minimal) return "minimal";
+  if (budget <= THINKING_BUDGETS.low) return "low";
+  if (budget <= THINKING_BUDGETS.medium) return "medium";
+  return "high";
+}
+
+function relayGenerationConfig(config, out) {
+  if (config === undefined || config === null) return;
+  if (!isObject(config)) throw requestError("generationConfig must be an object");
+  const set = function (name, value) { if (value !== undefined && value !== null) out[name] = value; };
+  set("temperature", config.temperature);
+  set("top_p", pick(config, "topP", "top_p"));
+  set("max_tokens", pick(config, "maxOutputTokens", "max_output_tokens"));
+  set("presence_penalty", pick(config, "presencePenalty", "presence_penalty"));
+  set("frequency_penalty", pick(config, "frequencyPenalty", "frequency_penalty"));
+  set("seed", config.seed);
+  const count = pick(config, "candidateCount", "candidate_count");
+  if (count !== undefined && count !== null) {
+    if (!Number.isInteger(count) || count < 1) throw requestError("candidateCount must be a positive whole number");
+    if (count > 1) out.n = count;
+  }
+  const stops = pick(config, "stopSequences", "stop_sequences");
+  if (stops !== undefined && stops !== null) {
+    if (!Array.isArray(stops)) throw requestError("stopSequences must be an array");
+    if (stops.length > RELAY_MAX_STOP_SEQUENCES) throw relayUnsupported("more than " + RELAY_MAX_STOP_SEQUENCES + " stopSequences");
+    if (stops.length > 0) out.stop = stops.slice();
+  }
+  const modalities = pick(config, "responseModalities", "response_modalities");
+  if (Array.isArray(modalities) && modalities.some(function (m) { return String(m).toUpperCase() !== "TEXT"; })) {
+    throw relayUnsupported("image or audio output through generateContent (use /v1/images/generations for images)");
+  }
+  for (const [camel, snake] of [["speechConfig", "speech_config"], ["imageConfig", "image_config"]]) {
+    if (pick(config, camel, snake) !== undefined) throw relayUnsupported(camel);
+  }
+  if (pick(config, "responseLogprobs", "response_logprobs") === true || pick(config, "logprobs", "logprobs") !== undefined) {
+    throw relayUnsupported("responseLogprobs");
+  }
+  const mime = String(pick(config, "responseMimeType", "response_mime_type") || "").toLowerCase();
+  const jsonSchema = pick(config, "responseJsonSchema", "response_json_schema");
+  const schema = pick(config, "responseSchema", "response_schema");
+  if (jsonSchema !== undefined || schema !== undefined) {
+    out.response_format = { type: "json_schema", json_schema: { name: "response", schema: jsonSchema !== undefined ? jsonSchema : jsonSchemaOf(schema) } };
+  } else if (mime === "application/json") {
+    out.response_format = { type: "json_object" };
+  } else if (mime && mime !== "text/plain") {
+    throw relayUnsupported("responseMimeType " + JSON.stringify(mime));
+  }
+  const effort = relayReasoningEffort(pick(config, "thinkingConfig", "thinking_config"));
+  if (effort) out.reasoning_effort = effort;
+}
+
+export function geminiToOpenAIChat(body, model, stream) {
+  if (!isObject(body)) throw requestError("request body must be a JSON object");
+  for (const key of Object.keys(body)) {
+    if (GEMINI_REQUEST_FIELDS.indexOf(key) < 0) throw relayUnsupported("the request field " + key);
+  }
+  const contents = body.contents;
+  if (!Array.isArray(contents) || contents.length === 0) throw requestError("contents is required");
+  const messages = [];
+  const system = pick(body, "systemInstruction", "system_instruction");
+  if (system !== undefined && system !== null) {
+    const parts = typeof system === "string" ? [{ text: system }] : isObject(system) && Array.isArray(system.parts) ? system.parts : [];
+    const text = parts.filter(function (p) { return isObject(p) && typeof p.text === "string" && p.text !== ""; }).map(function (p) { return p.text; }).join("\n");
+    if (text) messages.push({ role: "system", content: text });
+  }
+  // Function calls without ids take call_<n>; a response without an id takes
+  // the oldest open call of its name, as new-api's own conversion does.
+  const open = [];
+  let nextId = 1;
+  contents.forEach(function (content, contentIndex) {
+    if (!isObject(content) || !Array.isArray(content.parts)) throw requestError("contents[" + contentIndex + "] needs parts");
+    const assistant = content.role === "model";
+    const items = [];
+    const calls = [];
+    content.parts.forEach(function (part, partIndex) {
+      const where = "contents[" + contentIndex + "].parts[" + partIndex + "]";
+      if (!isObject(part)) throw requestError(where + " must be an object");
+      const call = pick(part, "functionCall", "function_call");
+      const response = pick(part, "functionResponse", "function_response");
+      if (isObject(call)) {
+        const id = call.id ? String(call.id) : "call_" + nextId++;
+        open.push({ id: id, name: String(call.name || "") });
+        calls.push({ id: id, type: "function", function: { name: String(call.name || ""), arguments: JSON.stringify(isObject(call.args) ? call.args : {}) } });
+      } else if (isObject(response)) {
+        let id = response.id ? String(response.id) : "";
+        const at = open.findIndex(function (c) { return id ? c.id === id : c.name === String(response.name || ""); });
+        if (at >= 0) {
+          id = open[at].id;
+          open.splice(at, 1);
+        } else if (!id) {
+          id = "call_" + nextId++;
+        }
+        messages.push({ role: "tool", tool_call_id: id, content: JSON.stringify(response.response === undefined ? {} : response.response) });
+      } else if (part.thought === true) {
+        // Earlier thinking is not sent back; OpenAI chat has no place for it.
+      } else if (typeof part.text === "string") {
+        if (part.text !== "") items.push({ type: "text", text: part.text });
+      } else if (pick(part, "inlineData", "inline_data") !== undefined || pick(part, "fileData", "file_data") !== undefined) {
+        if (assistant) throw relayUnsupported(where + ": media in a model turn");
+        items.push(relayMediaPart(part, where));
+      } else if (pick(part, "executableCode", "executable_code") !== undefined || pick(part, "codeExecutionResult", "code_execution_result") !== undefined) {
+        throw relayUnsupported(where + ": code execution parts");
+      } else if (Object.keys(part).every(function (k) { return k === "thoughtSignature" || k === "thought_signature" || k === "videoMetadata" || k === "mediaResolution"; })) {
+        // Nothing to send.
+      } else {
+        throw relayUnsupported(where + ": the part " + Object.keys(part).join(", "));
+      }
+    });
+    if (items.length === 0 && calls.length === 0) return;
+    const message = { role: assistant ? "assistant" : "user" };
+    const onlyText = items.every(function (item) { return item.type === "text"; });
+    if (items.length === 0) message.content = null;
+    else if (onlyText) message.content = items.map(function (item) { return item.text; }).join(assistant ? "" : "\n");
+    else message.content = items;
+    if (calls.length > 0) message.tool_calls = calls;
+    messages.push(message);
+  });
+  if (messages.length === 0) throw requestError("contents has no text, media or function parts");
+  const out = { model: checkModel(model), messages: messages };
+  relayGenerationConfig(pick(body, "generationConfig", "generation_config"), out);
+  const tools = relayTools(body.tools);
+  if (tools) out.tools = tools;
+  const choice = relayToolChoice(pick(body, "toolConfig", "tool_config"));
+  if (choice !== undefined) out.tool_choice = choice;
+  if (stream) {
+    out.stream = true;
+    out.stream_options = { include_usage: true };
+  }
+  return out;
+}
+
+// ---- OpenAI chat reply -> Gemini reply ----
+
+const RELAY_FINISH = { stop: "STOP", length: "MAX_TOKENS", content_filter: "SAFETY", tool_calls: "STOP", function_call: "STOP" };
+
+function geminiFinish(reason) {
+  return RELAY_FINISH[String(reason)] || "STOP";
+}
+
+// OpenAI usage as Gemini usage metadata: completion_tokens includes the
+// reasoning tokens (thoughtsTokenCount), unless the relay reports them on top
+// of completion_tokens (total = prompt + completion + reasoning).
+export function relayUsageMetadata(usage) {
+  if (!isObject(usage)) return null;
+  const prompt = num(usage.prompt_tokens !== undefined ? usage.prompt_tokens : usage.input_tokens);
+  let completion = num(usage.completion_tokens !== undefined ? usage.completion_tokens : usage.output_tokens);
+  const promptDetails = isObject(usage.prompt_tokens_details) ? usage.prompt_tokens_details : isObject(usage.input_tokens_details) ? usage.input_tokens_details : {};
+  const completionDetails = isObject(usage.completion_tokens_details) ? usage.completion_tokens_details : isObject(usage.output_tokens_details) ? usage.output_tokens_details : {};
+  const reasoning = num(completionDetails.reasoning_tokens);
+  let total = num(usage.total_tokens);
+  if (reasoning > 0 && total > 0 && total === prompt + completion + reasoning) completion += reasoning;
+  if (total === 0) total = prompt + completion;
+  if (prompt === 0 && completion === 0 && total === 0) return null;
+  const metadata = { promptTokenCount: prompt, candidatesTokenCount: Math.max(completion - reasoning, 0), totalTokenCount: total };
+  if (reasoning > 0) metadata.thoughtsTokenCount = reasoning;
+  const cached = num(promptDetails.cached_tokens);
+  if (cached > 0) metadata.cachedContentTokenCount = cached;
+  const audioIn = num(promptDetails.audio_tokens);
+  const imageIn = num(promptDetails.image_tokens);
+  if (audioIn > 0 || imageIn > 0) {
+    metadata.promptTokensDetails = [{ modality: "TEXT", tokenCount: Math.max(prompt - audioIn - imageIn, 0) }];
+    if (audioIn > 0) metadata.promptTokensDetails.push({ modality: "AUDIO", tokenCount: audioIn });
+    if (imageIn > 0) metadata.promptTokensDetails.push({ modality: "IMAGE", tokenCount: imageIn });
+  }
+  const imageOut = num(completionDetails.image_tokens);
+  if (imageOut > 0) {
+    metadata.candidatesTokensDetails = [
+      { modality: "TEXT", tokenCount: Math.max(completion - reasoning - imageOut, 0) },
+      { modality: "IMAGE", tokenCount: imageOut },
+    ];
+  }
+  return metadata;
+}
+
+function relayText(content) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map(function (item) { return isObject(item) && typeof item.text === "string" ? item.text : ""; }).join("");
+}
+
+function relayReasoning(message) {
+  if (!isObject(message)) return "";
+  if (typeof message.reasoning_content === "string") return message.reasoning_content;
+  return typeof message.reasoning === "string" ? message.reasoning : "";
+}
+
+function functionCallPart(id, name, args) {
+  const parsed = String(args || "").trim() === "" ? {} : parseJSON(String(args));
+  const call = { name: String(name || ""), args: isObject(parsed) ? parsed : { arguments: String(args) } };
+  if (id) call.id = String(id);
+  return { functionCall: call };
+}
+
+function relayImageParts(images) {
+  const parts = [];
+  for (const image of Array.isArray(images) ? images : []) {
+    const url = isObject(image) && isObject(image.image_url) ? String(image.image_url.url || "") : "";
+    const match = /^data:([^;,]+);base64,(.*)$/.exec(url);
+    if (match) parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+  }
+  return parts;
+}
+
+function relayError(body, status) {
+  const error = isObject(body.error) ? body.error : {};
+  const code = num(error.code);
+  const result = { status: code >= 400 && code <= 599 ? code : status >= 400 ? status : 502, message: String(error.message || "upstream error") };
+  if (typeof error.type === "string" && error.type) result.type = error.type;
+  return { error: result };
+}
+
+function relayModelVersion(reply, fallback) {
+  return isObject(reply) && typeof reply.model === "string" && reply.model !== "" ? reply.model : fallback;
+}
+
+export function chatReplyToGemini(reply, model) {
+  if (isObject(reply.error)) return relayError(reply, 0);
+  const choices = Array.isArray(reply.choices) ? reply.choices : [];
+  if (choices.length === 0) return { error: { status: 502, message: "the relay returned no choices", code: "empty_response" } };
+  const candidates = choices.map(function (choice, position) {
+    const message = isObject(choice) && isObject(choice.message) ? choice.message : {};
+    const parts = [];
+    const thought = relayReasoning(message);
+    if (thought) parts.push({ text: thought, thought: true });
+    const text = relayText(message.content);
+    if (text) parts.push({ text: text });
+    for (const part of relayImageParts(message.images)) parts.push(part);
+    for (const call of Array.isArray(message.tool_calls) ? message.tool_calls : []) {
+      if (isObject(call) && isObject(call.function)) parts.push(functionCallPart(call.id, call.function.name, call.function.arguments));
+    }
+    return {
+      content: { role: "model", parts: parts },
+      finishReason: geminiFinish(choice.finish_reason),
+      index: Number.isInteger(choice.index) ? choice.index : position,
+    };
+  });
+  const body = { candidates: candidates };
+  const metadata = relayUsageMetadata(reply.usage);
+  if (metadata) body.usageMetadata = metadata;
+  body.modelVersion = relayModelVersion(reply, model);
+  if (typeof reply.id === "string" && reply.id) body.responseId = reply.id;
+  return { body: body, contentType: "application/json" };
+}
+
+// ---- OpenAI chat stream -> Gemini stream events ----
+// State: model, modelVersion, responseId, tool calls per choice (assembled
+// from their deltas and sent with the finish), finish reasons, usage, done.
+
+function relayEvent(state, candidates, usage) {
+  const event = { candidates: candidates };
+  const metadata = relayUsageMetadata(usage);
+  if (metadata) event.usageMetadata = metadata;
+  event.modelVersion = state.modelVersion || state.model;
+  if (state.responseId) event.responseId = state.responseId;
+  return { data: JSON.stringify(event) };
+}
+
+// The closing event: each choice's tool calls and finish reason, with the
+// usage when the relay sent it.
+function relayFinish(state) {
+  if (state.closed) return [];
+  const indexes = Object.keys(state.finish).concat(Object.keys(state.tools)).filter(function (v, i, all) { return all.indexOf(v) === i; });
+  indexes.sort(function (a, b) { return Number(a) - Number(b); });
+  const candidates = indexes.map(function (key) {
+    const parts = (state.tools[key] || []).filter(Boolean).map(function (call) { return functionCallPart(call.id, call.name, call.arguments); });
+    return { content: { role: "model", parts: parts }, finishReason: geminiFinish(state.finish[key]), index: Number(key) };
+  });
+  if (candidates.length === 0 && !relayUsageMetadata(state.usage)) return [];
+  state.closed = true;
+  return [relayEvent(state, candidates, state.usage)];
+}
+
+function relayStreamEvent(state, input) {
+  const next = Object.assign({}, state, {
+    tools: Object.assign({}, state.tools || {}),
+    finish: Object.assign({}, state.finish || {}),
+  });
+  if (input.done) {
+    const events = relayFinish(next);
+    return events.length > 0 ? { events: events, state: next } : { state: next };
+  }
+  const text = String(input.data === undefined ? "" : input.data).trim();
+  if (text === "[DONE]") {
+    const events = relayFinish(next);
+    return events.length > 0 ? { events: events, state: next } : { state: next };
+  }
+  const chunk = parseJSON(text);
+  if (!isObject(chunk)) return { state: next };
+  if (isObject(chunk.error)) return relayError(chunk, 0);
+  if (typeof chunk.model === "string" && chunk.model) next.modelVersion = chunk.model;
+  if (typeof chunk.id === "string" && chunk.id) next.responseId = chunk.id;
+  if (isObject(chunk.usage)) next.usage = chunk.usage;
+  const candidates = [];
+  (Array.isArray(chunk.choices) ? chunk.choices : []).forEach(function (choice, position) {
+    if (!isObject(choice)) return;
+    const index = Number.isInteger(choice.index) ? choice.index : position;
+    const delta = isObject(choice.delta) ? choice.delta : {};
+    const parts = [];
+    const thought = relayReasoning(delta);
+    if (thought) parts.push({ text: thought, thought: true });
+    const content = relayText(delta.content);
+    if (content) parts.push({ text: content });
+    for (const part of relayImageParts(delta.images)) parts.push(part);
+    if (Array.isArray(delta.tool_calls)) {
+      const calls = (next.tools[index] || []).map(function (call) { return call ? Object.assign({}, call) : call; });
+      delta.tool_calls.forEach(function (call, at) {
+        if (!isObject(call)) return;
+        const slot = Number.isInteger(call.index) ? call.index : at;
+        const current = calls[slot] || { id: "", name: "", arguments: "" };
+        if (call.id) current.id = String(call.id);
+        const fn = isObject(call.function) ? call.function : {};
+        if (fn.name) current.name = String(fn.name);
+        if (typeof fn.arguments === "string") current.arguments += fn.arguments;
+        calls[slot] = current;
+      });
+      next.tools[index] = calls;
+    }
+    if (choice.finish_reason) next.finish[index] = String(choice.finish_reason);
+    if (parts.length > 0) candidates.push({ content: { role: "model", parts: parts }, index: index });
+  });
+  const events = [];
+  if (candidates.length > 0) events.push(relayEvent(next, candidates, null));
+  // Close once usage arrives after the finish (include_usage sends it last).
+  if (isObject(chunk.usage) && Object.keys(next.finish).length > 0) {
+    for (const event of relayFinish(next)) events.push(event);
+  }
+  return events.length > 0 ? { events: events, state: next } : { state: next };
+}
+
+// ---- Gemini embeddings <-> OpenAI embeddings ----
+
+function embedText(content, where) {
+  if (!isObject(content) || !Array.isArray(content.parts) || content.parts.length === 0) throw requestError(where + " needs content parts");
+  return content.parts.map(function (part, index) {
+    if (!isObject(part) || typeof part.text !== "string") throw relayUnsupported(where + ".parts[" + index + "]: embedding input other than text");
+    return part.text;
+  }).join("\n");
+}
+
+export function geminiEmbedToOpenAI(body, model, batch) {
+  if (!isObject(body)) throw requestError("request body must be a JSON object");
+  const requests = batch ? body.requests : [body];
+  if (!Array.isArray(requests) || requests.length === 0) throw requestError("requests is required");
+  let dimensions;
+  const input = requests.map(function (request, index) {
+    const where = batch ? "requests[" + index + "]" : "content";
+    if (!isObject(request)) throw requestError(where + " must be an object");
+    const size = pick(request, "outputDimensionality", "output_dimensionality");
+    if (index === 0) dimensions = size;
+    else if (size !== dimensions) throw relayUnsupported("different outputDimensionality values in one batch");
+    return embedText(request.content, where);
+  });
+  const out = { model: checkModel(model), input: batch ? input : input[0], encoding_format: "float" };
+  if (dimensions !== undefined && dimensions !== null) {
+    if (!Number.isInteger(dimensions) || dimensions < 1) throw requestError("outputDimensionality must be a positive whole number");
+    out.dimensions = dimensions;
+  }
+  return out;
+}
+
+function openAIEmbeddingsToGemini(reply, batch) {
+  if (isObject(reply.error)) return relayError(reply, 0);
+  const data = Array.isArray(reply.data) ? reply.data.slice() : null;
+  if (!data || data.length === 0) return { error: { status: 502, message: "the relay returned no embeddings" } };
+  data.sort(function (a, b) { return (isObject(a) ? num(a.index) : 0) - (isObject(b) ? num(b.index) : 0); });
+  const vectors = [];
+  for (const item of data) {
+    if (!isObject(item) || !Array.isArray(item.embedding)) return { error: { status: 502, message: "the relay returned an embedding that is not a list of numbers" } };
+    vectors.push({ values: item.embedding });
+  }
+  const body = batch ? { embeddings: vectors } : { embedding: vectors[0] };
+  const usage = isObject(reply.usage) ? reply.usage : {};
+  const prompt = num(usage.prompt_tokens) || num(usage.total_tokens);
+  if (prompt > 0) body.usageMetadata = { promptTokenCount: prompt };
+  return { body: body, contentType: "application/json" };
+}
+
+// ---- The relay's model list ----
+
+function relayModelList(response, state) {
+  if (!isObject(state) || state.kind !== KIND_RELAY_MODELS) {
+    // The route asks for Gemini's list first; the relay's is /v1/models.
+    return { next: { method: "GET", path: RELAY_MODELS_PATH }, state: { kind: KIND_RELAY_MODELS } };
+  }
+  const status = Number(response.status) || 0;
+  if (status < 200 || status >= 300) return { error: { status: status || 502, message: "the relay's model list request failed with status " + status } };
+  const parsed = parseJSON(response.body);
+  const list = isObject(parsed) && Array.isArray(parsed.data) ? parsed.data : null;
+  if (!list) return { error: { status: 502, message: "the relay's model list is not an OpenAI model list" } };
+  const ids = [];
+  for (const item of list) {
+    const id = isObject(item) && typeof item.id === "string" ? item.id.trim() : "";
+    if (id && ids.indexOf(id) < 0) ids.push(id);
+  }
+  return {
+    body: { object: "list", data: ids.map(function (id) { return { id: id, object: "model", owned_by: "openai-compatible" }; }) },
+    contentType: "application/json",
+  };
 }

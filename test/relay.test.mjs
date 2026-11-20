@@ -31,7 +31,7 @@ function deepFreeze(value) {
   return value;
 }
 
-test("relay routes: Gemini native and OpenAI text routes use new-api's own conversion", () => {
+test("relay routes: Gemini native and OpenAI text routes keep new-api's own conversion behind the hooks", () => {
   const byPath = Object.fromEntries(meta.relay.map((r) => [r.incoming_path, r]));
   assert.equal(meta.relay.length, 12);
   for (const route of meta.relay) {
@@ -41,10 +41,10 @@ test("relay routes: Gemini native and OpenAI text routes use new-api's own conve
   for (const path of ["/v1beta/models/{model}:generateContent", "/v1/models/{model}:generateContent",
     "/v1beta/models/{model}:embedContent", "/v1/models/{model}:embedContent",
     "/v1beta/models/{model}:batchEmbedContents", "/v1/models/{model}:batchEmbedContents"]) {
-    assert.equal(byPath[path].converter, undefined, path + " is a native route");
+    assert.equal(byPath[path].converter, "plugin", path + " runs the hooks (sent on unchanged on the Gemini API)");
   }
-  assert.equal(byPath["/v1/chat/completions"].converter, "openai_chat_completions_to_gemini_generate_content");
-  assert.equal(byPath["/v1/responses"].converter, "openai_responses_to_gemini_generate_content");
+  assert.equal(byPath["/v1/chat/completions"].converter, "openai_chat_completions_to_gemini_generate_content+plugin");
+  assert.equal(byPath["/v1/responses"].converter, "openai_responses_to_gemini_generate_content+plugin");
   assert.equal(byPath["/v1/messages"].converter, "anthropic_messages_to_openai_chat_completions+plugin");
   assert.equal(byPath["/v1/embeddings"].converter, "plugin");
   assert.equal(byPath["/v1/images/generations"].converter, "plugin");
@@ -85,10 +85,18 @@ test("signRequest adds ?key= only when configured", () => {
   assert.deepEqual(signRequest({ baseUrl: BASE, credential: null, apiKey: "K", config: {} }, request), {});
 });
 
-test("native and host-converted paths never reach the convert hooks", () => {
-  for (const path of ["/v1beta/models/gemini-3.8-flash:generateContent", "/v1/chat/completions", "/v1/responses", "/v1/audio/speech"]) {
-    assert.throws(() => convertRequest(ctx(path), { body: {}, model: "gemini-3.8-flash", stream: false }), /unsupported path/);
+test("Gemini API: native and host-converted requests go on unchanged to new-api's Gemini handling", () => {
+  const body = deepFreeze({ contents: [{ role: "user", parts: [{ text: "hi" }] }], generationConfig: { maxOutputTokens: 8 } });
+  for (const [path, stream] of [["/v1beta/models/gemini-3.8-flash:generateContent", false], ["/v1beta/models/gemini-3.8-flash:streamGenerateContent", true],
+    ["/v1/models/gemini-3.8-flash:generateContent", false], ["/v1beta/models/gemini-embedding-2:embedContent", false],
+    ["/v1/models/gemini-embedding-2:batchEmbedContents", false], ["/v1/chat/completions", true], ["/v1/responses", false]]) {
+    for (const config of [{}, { upstreamType: "gemini" }]) {
+      const out = convertRequest(ctx(path, { config: config }), { body: body, model: "gemini-3.8-flash", stream: stream });
+      assert.deepEqual(out, { body: body, stream: stream, nativeResponse: true }, path);
+      assert.equal(out.body, body, "the very request new-api built");
+    }
   }
+  assert.throws(() => convertRequest(ctx("/v1/audio/speech"), { body: {}, model: "gemini-3.8-flash", stream: false }), /unsupported path/);
 });
 
 test("Claude path: OpenAI chat becomes a Gemini request on the streaming path when asked", () => {

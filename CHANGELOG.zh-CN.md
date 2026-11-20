@@ -1,27 +1,19 @@
 ---
 changelogVersion: 1
 plugin: byaiden_gemini
-version: 2.0.0
+version: 2.1.0
 locale: "zh-CN"
 ---
 
 # Changelog
 
-## [2.0.0]
+## [2.1.0]
 
 ### Added
 
-- 同一渠道支持 Gemini API 文本：Gemini 原生 `generateContent` 和 `streamGenerateContent`、OpenAI Chat Completions、OpenAI Responses 和 Claude Messages，均支持流式。Gemini 原生请求、Chat Completions 和 Responses 使用 new-api 自带的 Gemini 转换和计费；Claude Messages 由插件转换，按 Gemini 返回的用量计费。
-- 向量：Gemini 原生 `embedContent` 和 `batchEmbedContents`，以及经 `batchEmbedContents` 实现的 OpenAI `POST /v1/embeddings`（文本）。
-- `POST /v1/images/generations` 生成图像，使用 Gemini 图像模型（`gemini-nano-banana-2.1`、`gemini-3.1-flash-image`、`gemini-3.1-flash-lite-image`、`gemini-3-pro-image`、`gemini-2.5-flash-image`），按输入、输出和图像输出 token 计费。
-- 获取模型列表：`GET /v1/models` 读取 Gemini API 模型列表的全部分页，保留渠道能服务的模型，并加上 Gemini Omni 和 Gemini Decision。
-- 渠道设置：API 版本（`v1beta`、`v1`、`v1alpha`），以及同时以 `?key=` 发送密钥。
-- 模型列表加入 Gemini 文本、向量和图像模型，README 提供可直接粘贴的价格表达式。
+- 渠道设置「上游类型」：Gemini 官方 API（默认，行为不变）或 OpenAI 兼容中转。中转渠道的 Base URL 填中转根地址，Key 以 `Authorization: Bearer` 发送；Gemini 原生 `generateContent` 和 `streamGenerateContent`、OpenAI Chat Completions、OpenAI Responses 与 Claude Messages 发往中转的 `/v1/chat/completions`，回复和流转换回 Gemini 格式，并按中转返回的用量计费；Gemini `embedContent`、`batchEmbedContents` 与 OpenAI 向量发往 `/v1/embeddings`，生图发往 `/v1/images/generations`，获取模型列表读取中转的 `/v1/models`。
+- 中转渠道上，Gemini Omni、Gemini Decision 以及中转协议无法承载的 Gemini 功能（Google 搜索和代码执行工具、经 `generateContent` 输出图像或音频、缓存内容、Files API 引用）会被拒绝并给出提示，不计费。
 
 ### Changed
 
-- 插件改名为 Gemini（Gemini API）。Gemini Omni 和 Gemini Decision 与 1.2.0 相同，也可经由另一个 New API 网关使用。
-
-### Migration
-
-- 启用 2.0.0 后已有渠道照常工作。要在这些渠道售卖文本、向量和图像模型，添加模型（获取模型列表）并设置价格。在渠道表单中选择插件会替换该渠道的模型列表，把已有渠道改用本插件前请先复制「模型」字段。
+- Gemini 原生、向量、Chat Completions 和 Responses 路由现在经过插件的请求钩子；在 Gemini 官方 API 渠道上钩子把 new-api 构造的请求原样发出，回复、流和计费仍由 new-api 自带的 Gemini 处理完成。

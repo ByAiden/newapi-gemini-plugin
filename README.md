@@ -8,17 +8,17 @@ translations:
 
 **English** | [简体中文](README.zh-CN.md)
 
-One new-api channel for the Gemini API with a Google AI Studio key: Gemini text models on the Gemini, OpenAI Chat Completions, OpenAI Responses and Claude Messages endpoints (streaming included), embeddings, image generation with the Gemini image models, Gemini Omni Flash video and Gemini Decision 1. The channel's model list is fetched from the Gemini API.
+One new-api channel for the Gemini API with a Google AI Studio key: Gemini text models on the Gemini, OpenAI Chat Completions, OpenAI Responses and Claude Messages endpoints (streaming included), embeddings, image generation with the Gemini image models, Gemini Omni Flash video and Gemini Decision 1. The channel's model list is fetched from the Gemini API. The upstream can also be an OpenAI-compatible relay that serves Gemini models.
 
 Requires new-api v1.0.0-rc.50 or later (tested on v1.0.0-rc.51 and new-api-horizon 0.7.0-rc.12).
 
 ## Channel setup
 
 1. Install the plugin, then add a channel of type Task Plugin and bind it to `byaiden_gemini`.
-2. Base URL: leave empty for `https://generativelanguage.googleapis.com`, or enter a relay that speaks the Gemini API.
+2. Base URL: leave empty for `https://generativelanguage.googleapis.com`, or enter a relay that speaks the Gemini API. For a relay that speaks OpenAI's API, see [OpenAI-compatible relay upstream](#openai-compatible-relay-upstream).
 3. Key: a Gemini API key from Google AI Studio, one per line for several keys. Gemini Omni and some text models need a project on the paid tier.
 4. Models: Fetch models lists every model the key can use through this channel (text, embedding and image models, plus Gemini Omni and Gemini Decision); keep the ones you sell. A model appears on the pricing pages only after an enabled channel lists it.
-5. Optional channel settings: API version (`v1beta` by default, as on the built-in Gemini channel; applies to text, embedding and image requests) and "Also send the key as ?key=" for relays that read the key only from the query string.
+5. Optional channel settings: Upstream type (Gemini API by default, or OpenAI-compatible relay, see below), API version (`v1beta` by default, as on the built-in Gemini channel; applies to text, embedding and image requests) and "Also send the key as ?key=" for relays that read the key only from the query string.
 
 Picking this plugin in the channel form replaces the channel's model list with the plugin's list. When you move an existing channel to this plugin, copy its Models field first and paste it back after selecting the plugin; model mapping, groups and priority are kept.
 
@@ -150,6 +150,25 @@ A second gateway can sell these models through yours. Install this plugin on bot
 - On the other gateway, create a **New API** channel (type 60). Its base URL is the first gateway's address and its key is a token from the first gateway. Pick `byaiden_gemini` under Upstream task plugins and add the models.
 
 Text requests pass through the New API channel as ordinary requests; price them on each gateway as above. Gemini Omni goes to the first gateway's `POST /v1/videos` with the token as a Bearer key, is polled at `GET /v1/videos/{id}` there and downloads from `GET /v1/videos/{id}/content`; the client can use `/v1/videos` or `/v1/responses` on the outer gateway. Gemini Decision goes to the first gateway's `/byaiden_gemini/v1beta/decisions`. Both gateways reserve and settle Gemini Omni and Gemini Decision the same way: a finished video object on the first gateway carries the billed `usage` (`input_tokens`, `output_tokens`, `video_tokens`), and a decision reply carries `usage.total_input_tokens`, so the expressions above charge the same usage on both.
+
+## OpenAI-compatible relay upstream
+
+Set the channel setting **Upstream type** to **OpenAI-compatible relay** when the upstream is a relay that serves Gemini models over OpenAI's API. The Base URL is the relay's root (for example `https://relay.example.com`, without `/v1`) and the key is the relay's key, sent as `Authorization: Bearer`. The default, **Gemini API**, works as described above; the API version and `?key=` settings apply to it only. Saving a relay channel with an empty Base URL or a Google address fails with a message.
+
+| Client endpoint | Sent to the relay as |
+| --- | --- |
+| Gemini `generateContent`, `streamGenerateContent` | OpenAI `POST /v1/chat/completions`, streamed when the client streams; the reply and the stream come back in Gemini format |
+| OpenAI Chat Completions, OpenAI Responses | new-api turns the request into a Gemini request as on the Gemini API, the plugin sends it as OpenAI `POST /v1/chat/completions`, and the client gets its own format back |
+| Claude Messages | OpenAI `POST /v1/chat/completions` (new-api's own Claude conversion) |
+| Gemini `embedContent`, `batchEmbedContents` | OpenAI `POST /v1/embeddings` (text input) |
+| OpenAI embeddings, image generation | `POST /v1/embeddings` and `POST /v1/images/generations` as they are |
+| Fetch models | `GET /v1/models`, with the ids the relay lists |
+
+The model name goes to the relay as the channel's upstream model, and the model the relay reports is passed on as it is.
+
+Billing on a relay channel uses the relay's OpenAI `usage`: `prompt_tokens` as input (`cached_tokens` as cached input, `audio_tokens` as audio input) and `completion_tokens` as output, reasoning tokens included. Streams ask the relay for usage with `stream_options.include_usage`; a relay that sends none is estimated by new-api. The expression variables above apply; price the models at what the relay charges you.
+
+Not available on a relay channel, refused before anything is sent (nothing is billed): Gemini Omni and Gemini Decision (leave these models off the channel; `/v1/videos` and `/v1beta/decisions` say why, Omni on `/v1/responses` answers `Invalid task protocol request`), and, with a message naming the field, the Google Search, code execution and URL context tools, image or audio output through `generateContent` (use `/v1/images/generations` for images), cached content, Files API references, `responseLogprobs`, more than 4 stop sequences, and media other than PNG, JPEG, WebP and GIF images, WAV and MP3 audio and PDF. `topK`, `safetySettings`, `taskType` and `title` are not sent. A thinking budget is sent as the nearest `reasoning_effort` (`0` is `none`, up to 512 `minimal`, up to 1,024 `low`, up to 8,192 `medium`, above that `high`), and earlier thinking in the conversation is not sent back.
 
 ## Limits
 

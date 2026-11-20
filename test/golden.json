@@ -1757,12 +1757,701 @@
       "expected": {}
     },
     {
-      "name": "native paths never reach convertRequest",
+      "name": "Gemini API: native request goes on unchanged",
       "hook": "convertRequest",
       "args": [
         {
           "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1beta/models/gemini-3.8-flash:streamGenerateContent",
+          "config": {}
+        },
+        {
+          "body": {
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "hi"
+                  }
+                ]
+              }
+            ]
+          },
+          "model": "gemini-3.8-flash",
+          "stream": true
+        }
+      ],
+      "expected": {
+        "body": {
+          "contents": [
+            {
+              "role": "user",
+              "parts": [
+                {
+                  "text": "hi"
+                }
+              ]
+            }
+          ]
+        },
+        "stream": true,
+        "nativeResponse": true
+      }
+    },
+    {
+      "name": "Gemini API: chat request built by new-api goes on unchanged",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/chat/completions",
+          "config": {
+            "upstreamType": "gemini"
+          }
+        },
+        {
+          "body": {
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "hi"
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {}
+          },
+          "model": "gemini-3.8-flash",
+          "stream": false
+        }
+      ],
+      "expected": {
+        "body": {
+          "contents": [
+            {
+              "role": "user",
+              "parts": [
+                {
+                  "text": "hi"
+                }
+              ]
+            }
+          ],
+          "generationConfig": {}
+        },
+        "stream": false,
+        "nativeResponse": true
+      }
+    },
+    {
+      "name": "relay: native generateContent becomes OpenAI chat",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
           "path": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "body": {
+            "systemInstruction": {
+              "parts": [
+                {
+                  "text": "be brief"
+                }
+              ]
+            },
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "hi"
+                  },
+                  {
+                    "inlineData": {
+                      "mimeType": "image/png",
+                      "data": "AAAA"
+                    }
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {
+              "maxOutputTokens": 64,
+              "temperature": 0.2,
+              "thinkingConfig": {
+                "thinkingLevel": "low"
+              }
+            },
+            "tools": [
+              {
+                "functionDeclarations": [
+                  {
+                    "name": "f",
+                    "parameters": {
+                      "type": "OBJECT",
+                      "properties": {
+                        "a": {
+                          "type": "STRING"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "model": "gemini-3.8-flash",
+          "stream": false
+        }
+      ],
+      "expected": {
+        "body": {
+          "model": "gemini-3.8-flash",
+          "messages": [
+            {
+              "role": "system",
+              "content": "be brief"
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "hi"
+                },
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": "data:image/png;base64,AAAA"
+                  }
+                }
+              ]
+            }
+          ],
+          "temperature": 0.2,
+          "max_tokens": 64,
+          "reasoning_effort": "low",
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "f",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "path": "/v1/chat/completions",
+        "stream": false,
+        "state": {
+          "kind": "relay_generate",
+          "model": "gemini-3.8-flash",
+          "stream": false
+        }
+      }
+    },
+    {
+      "name": "relay: chat client streams to the relay with usage",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/chat/completions",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "body": {
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "hi"
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {
+              "maxOutputTokens": 16
+            }
+          },
+          "model": "gemini-3.8-flash",
+          "stream": true
+        }
+      ],
+      "expected": {
+        "body": {
+          "model": "gemini-3.8-flash",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "max_tokens": 16,
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        },
+        "path": "/v1/chat/completions",
+        "stream": true,
+        "state": {
+          "kind": "relay_generate",
+          "model": "gemini-3.8-flash",
+          "stream": true
+        }
+      }
+    },
+    {
+      "name": "relay: chat reply becomes a Gemini reply with the relay's model",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "config": {
+            "upstreamType": "openai"
+          },
+          "state": {
+            "kind": "relay_generate",
+            "model": "gemini-3.8-flash",
+            "stream": false
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"id\":\"c1\",\"model\":\"relay-gemini-3.8-flash\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Hello\",\"reasoning_content\":\"plan\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":1200,\"completion_tokens\":500,\"total_tokens\":1700,\"prompt_tokens_details\":{\"cached_tokens\":400},\"completion_tokens_details\":{\"reasoning_tokens\":200}}}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "candidates": [
+            {
+              "content": {
+                "role": "model",
+                "parts": [
+                  {
+                    "text": "plan",
+                    "thought": true
+                  },
+                  {
+                    "text": "Hello"
+                  }
+                ]
+              },
+              "finishReason": "STOP",
+              "index": 0
+            }
+          ],
+          "usageMetadata": {
+            "promptTokenCount": 1200,
+            "candidatesTokenCount": 300,
+            "totalTokenCount": 1700,
+            "thoughtsTokenCount": 200,
+            "cachedContentTokenCount": 400
+          },
+          "modelVersion": "relay-gemini-3.8-flash",
+          "responseId": "c1"
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "relay: stream text chunk",
+      "hook": "convertStreamEvent",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/chat/completions",
+          "config": {
+            "upstreamType": "openai"
+          },
+          "state": {
+            "kind": "relay_generate",
+            "model": "gemini-3.8-flash",
+            "stream": true
+          }
+        },
+        {
+          "data": "{\"id\":\"c1\",\"model\":\"relay-gemini-3.8-flash\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hel\"}}]}"
+        }
+      ],
+      "expected": {
+        "events": [
+          {
+            "data": "{\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"Hel\"}]},\"index\":0}],\"modelVersion\":\"relay-gemini-3.8-flash\",\"responseId\":\"c1\"}"
+          }
+        ],
+        "state": {
+          "kind": "relay_generate",
+          "model": "gemini-3.8-flash",
+          "stream": true,
+          "tools": {},
+          "finish": {},
+          "modelVersion": "relay-gemini-3.8-flash",
+          "responseId": "c1"
+        }
+      }
+    },
+    {
+      "name": "relay: stream usage closes with finish and usage",
+      "hook": "convertStreamEvent",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/chat/completions",
+          "config": {
+            "upstreamType": "openai"
+          },
+          "state": {
+            "kind": "relay_generate",
+            "model": "gemini-3.8-flash",
+            "stream": true,
+            "modelVersion": "relay-gemini-3.8-flash",
+            "responseId": "c1",
+            "tools": {
+              "0": [
+                {
+                  "id": "call_1",
+                  "name": "f",
+                  "arguments": "{\"a\":\"x\"}"
+                }
+              ]
+            },
+            "finish": {
+              "0": "tool_calls"
+            }
+          }
+        },
+        {
+          "data": "{\"id\":\"c1\",\"model\":\"relay-gemini-3.8-flash\",\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15}}"
+        }
+      ],
+      "expected": {
+        "events": [
+          {
+            "data": "{\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"functionCall\":{\"name\":\"f\",\"args\":{\"a\":\"x\"},\"id\":\"call_1\"}}]},\"finishReason\":\"STOP\",\"index\":0}],\"usageMetadata\":{\"promptTokenCount\":10,\"candidatesTokenCount\":5,\"totalTokenCount\":15},\"modelVersion\":\"relay-gemini-3.8-flash\",\"responseId\":\"c1\"}"
+          }
+        ],
+        "state": {
+          "kind": "relay_generate",
+          "model": "gemini-3.8-flash",
+          "stream": true,
+          "modelVersion": "relay-gemini-3.8-flash",
+          "responseId": "c1",
+          "tools": {
+            "0": [
+              {
+                "id": "call_1",
+                "name": "f",
+                "arguments": "{\"a\":\"x\"}"
+              }
+            ]
+          },
+          "finish": {
+            "0": "tool_calls"
+          },
+          "usage": {
+            "prompt_tokens": 10,
+            "completion_tokens": 5,
+            "total_tokens": 15
+          },
+          "closed": true
+        }
+      }
+    },
+    {
+      "name": "relay: Claude Messages go to the relay's chat completions as they are",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/messages",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "body": {
+            "model": "gemini-3.8-flash",
+            "messages": [
+              {
+                "role": "user",
+                "content": "hi"
+              }
+            ],
+            "stream": true
+          },
+          "model": "gemini-3.8-flash",
+          "stream": true
+        }
+      ],
+      "expected": {
+        "body": {
+          "model": "gemini-3.8-flash",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "stream": true,
+          "stream_options": {
+            "include_usage": true
+          }
+        },
+        "path": "/v1/chat/completions",
+        "stream": true,
+        "nativeResponse": true,
+        "state": {
+          "kind": "relay_pass"
+        }
+      }
+    },
+    {
+      "name": "relay: embedContent becomes OpenAI embeddings",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1beta/models/gemini-embedding-2:embedContent",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "body": {
+            "content": {
+              "parts": [
+                {
+                  "text": "a"
+                }
+              ]
+            },
+            "outputDimensionality": 8
+          },
+          "model": "gemini-embedding-2",
+          "stream": false
+        }
+      ],
+      "expected": {
+        "body": {
+          "model": "gemini-embedding-2",
+          "input": "a",
+          "encoding_format": "float",
+          "dimensions": 8
+        },
+        "path": "/v1/embeddings",
+        "stream": false,
+        "state": {
+          "kind": "relay_embed",
+          "batch": false
+        }
+      }
+    },
+    {
+      "name": "relay: embeddings reply becomes a Gemini batch reply",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1beta/models/gemini-embedding-2:batchEmbedContents",
+          "config": {
+            "upstreamType": "openai"
+          },
+          "state": {
+            "kind": "relay_embed",
+            "batch": true
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"data\":[{\"index\":0,\"embedding\":[0.1,0.2]}],\"usage\":{\"prompt_tokens\":3,\"total_tokens\":3}}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "embeddings": [
+            {
+              "values": [
+                0.1,
+                0.2
+              ]
+            }
+          ],
+          "usageMetadata": {
+            "promptTokenCount": 3
+          }
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "relay: model list goes to the relay's /v1/models",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/models",
+          "config": {
+            "upstreamType": "openai"
+          },
+          "state": null
+        },
+        {
+          "status": 404,
+          "headers": {},
+          "body": "not found"
+        }
+      ],
+      "expected": {
+        "next": {
+          "method": "GET",
+          "path": "/v1/models"
+        },
+        "state": {
+          "kind": "relay_models"
+        }
+      }
+    },
+    {
+      "name": "relay: the relay's model ids are kept",
+      "hook": "convertResponse",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1/models",
+          "config": {
+            "upstreamType": "openai"
+          },
+          "state": {
+            "kind": "relay_models"
+          }
+        },
+        {
+          "status": 200,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"object\":\"list\",\"data\":[{\"id\":\"gemini-3.8-flash\"},{\"id\":\"relay-model:latest\"}]}"
+        }
+      ],
+      "expected": {
+        "body": {
+          "object": "list",
+          "data": [
+            {
+              "id": "gemini-3.8-flash",
+              "object": "model",
+              "owned_by": "openai-compatible"
+            },
+            {
+              "id": "relay-model:latest",
+              "object": "model",
+              "owned_by": "openai-compatible"
+            }
+          ]
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "name": "relay: key as Bearer",
+      "hook": "signRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "credential": null,
+          "apiKey": "K",
+          "config": {
+            "upstreamType": "openai",
+            "keyInQuery": true
+          }
+        },
+        {
+          "method": "POST",
+          "url": "https://relay.example.com/v1/chat/completions",
+          "headers": {},
+          "bodySha256": ""
+        }
+      ],
+      "expected": {
+        "headers": {
+          "Authorization": "Bearer K"
+        }
+      }
+    },
+    {
+      "name": "relay: no Gemini path rewriting",
+      "hook": "prepareRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1beta/models/gemini-3.8-flash:streamGenerateContent",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "path": "/v1beta/models/gemini-3.8-flash:streamGenerateContent",
+          "upstreamPath": "/v1/chat/completions",
+          "model": "gemini-3.8-flash",
+          "stream": true,
+          "body": {},
+          "headers": {}
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "relay: a Google Base URL is refused",
+      "hook": "checkKey",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        "sk-relay"
+      ],
+      "expected": {
+        "error": {
+          "en": "Upstream type is OpenAI-compatible relay: set the channel Base URL to the relay's address, not generativelanguage.googleapis.com.",
+          "zh": "上游类型为 OpenAI 兼容中转：请把渠道 Base URL 填为中转地址，而不是 generativelanguage.googleapis.com。"
+        }
+      }
+    },
+    {
+      "name": "unknown paths never reach convertRequest",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://generativelanguage.googleapis.com",
+          "path": "/v1/audio/speech",
           "config": {}
         },
         {
@@ -1772,6 +2461,67 @@
         }
       ],
       "expectedError": "unsupported path"
+    },
+    {
+      "name": "relay: Google Search is refused",
+      "hook": "convertRequest",
+      "args": [
+        {
+          "baseUrl": "https://relay.example.com",
+          "path": "/v1beta/models/gemini-3.8-flash:generateContent",
+          "config": {
+            "upstreamType": "openai"
+          }
+        },
+        {
+          "body": {
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "x"
+                  }
+                ]
+              }
+            ],
+            "tools": [
+              {
+                "googleSearch": {}
+              }
+            ]
+          },
+          "model": "gemini-3.8-flash",
+          "stream": false
+        }
+      ],
+      "expectedError": "OpenAI-compatible relay"
+    },
+    {
+      "name": "Gemini Omni is refused on a relay channel",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "gemini-omni-1.2-flash",
+          "upstreamModel": "gemini-omni-1.2-flash",
+          "baseUrl": "https://relay.example.com",
+          "apiKey": "K",
+          "authHeader": "K",
+          "config": {
+            "upstreamType": "openai"
+          },
+          "upstream": {
+            "kind": "vendor"
+          },
+          "requestBody": {
+            "prompt": "x"
+          },
+          "action": "",
+          "files": [],
+          "publicTaskId": "task_1"
+        }
+      ],
+      "expectedError": "OpenAI-compatible relay"
     },
     {
       "name": "image generation needs a Gemini image model",
